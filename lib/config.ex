@@ -54,9 +54,9 @@ defmodule Fettle.Config do
   @typedoc "top-level configuration for global settings and check defaults"
   @type t :: %__MODULE__{
     system_code: atom | String.t,
-    name: String.t,
-    description: String.t,
-    schema: atom, # module implementing Fettle.Schema.Api
+    name: atom | String.t,
+    description: atom | String.t,
+    schema: atom, # module implementing Fettle.Schema
     initial_delay_ms: integer, # initial delay before starting any checks
     period_ms: integer, # period between checks
     timeout_ms: integer, # check timeout
@@ -65,12 +65,9 @@ defmodule Fettle.Config do
     technical_summary: String.t # default for checks
   }
 
-  @typedoc """
-  a check's configuration.
+  @typedoc "Tuple which specifies a check derived from config"
+  @type spec_and_mod :: {Spec.t, module, options :: Keyword.t}
 
-  `options` will be supplied to check runner; `options[:args]` will be passed to checker module's check function.
-  """
-  @type spec_and_fun :: {Spec.t, function, options :: Keyword.t}
 
   @spec to_app_config(map) :: __MODULE__.t
   def to_app_config(map) do
@@ -125,7 +122,7 @@ defmodule Fettle.Config do
     ]
   ```
   """
-  @spec check_from_config({map(), atom} | {map(), atom, Keyword.t}, config :: __MODULE__.t) :: {%Spec{}, atom, Keyword.t}
+  @spec check_from_config({map(), atom} | {map(), atom, Keyword.t}, config :: __MODULE__.t) :: spec_and_mod
   def check_from_config(healthcheck, config)
 
   def check_from_config({healthcheck, module}, config = %__MODULE__{}), do: check_from_config({healthcheck, module, []}, config)

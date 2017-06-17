@@ -1,11 +1,9 @@
 defmodule Fettle.Schema.FTHealthCheckV1 do
   @moduledoc "Implements the FT Health Check Schema V1."
 
-  @behaviour Fettle.Schema.Api
+  @behaviour Fettle.Schema
 
   @schemaVersion 1
-
-  alias Fettle.Schema.Api
 
   defmodule CheckResult do
 
@@ -57,7 +55,7 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   alias Fettle.TimeStamp
   alias Fettle.Spec
 
-  @spec to_schema(%{required(atom) => binary | integer}, [Api.check]) :: Report.t
+  @spec to_schema(config :: Fettle.Config.t, results :: [Api.check]) :: Report.t
   def to_schema(config, results) when is_map(config) and is_list(results) do
     %__MODULE__.Report{
       schemaVersion: @schemaVersion,

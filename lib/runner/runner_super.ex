@@ -5,16 +5,18 @@ defmodule Fettle.RunnerSupervisor do
 
   require Logger
 
+  alias Fettle.Config
   alias Fettle.Spec
 
   @doc false
-  def start_link(config, checks) do
+  @spec start_link(config :: Config.t, checks: [Config.spec_and_mod]) :: Supervisor.on_start
+  def start_link(config = %Config{}, checks) when is_list(checks) do
     Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [config, checks]}" end)
     Supervisor.start_link(__MODULE__, [config, checks], name: via())
   end
 
   @doc false
-  def init([config, checks]) do
+  def init([config = %Config{}, checks]) when is_list(checks) do
     Logger.debug(fn -> "#{__MODULE__} init #{inspect [config, checks]}" end)
 
     children = [
@@ -35,10 +37,10 @@ defmodule Fettle.RunnerSupervisor do
   end
 
   @doc "Start running a check periodically."
-  @spec start_check({Spec.t, atom, Keyword.t}) :: :ok
+  @spec start_check({Spec.t, atom, Keyword.t}) :: Supervisor.on_start_child
   def start_check({spec = %Spec{}, module, opts}) when is_atom(module) do
     Logger.debug(fn -> "#{__MODULE__} start_check #{inspect spec}" end)
-    runner_opts = Keyword.drop(opts, :args)
+    runner_opts = Keyword.drop(opts, [:args])
 
     check_fun_args = opts[:args] || [[]]
     check_fun = fn -> apply(module, :check, check_fun_args) end

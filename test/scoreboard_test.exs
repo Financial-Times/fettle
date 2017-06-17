@@ -6,14 +6,9 @@ defmodule ScoreBoardTest do
   alias Fettle.Checker.Result
   alias Fettle.TimeStamp
 
-  defmodule TestSchema do
-    @behaviour Fettle.Schema.Api
+  import Fettle.TestMacros
 
-    def to_schema(app, checks) do
-      %{systemCode: app.system_code, count: length(checks)}
-    end
-  end
-
+  testschema TestSchema
 
   test "init with no checks" do
     {:ok, state} = ScoreBoard.init([config(), []])
@@ -73,7 +68,7 @@ defmodule ScoreBoardTest do
     assert {%Spec{id: "check-2"}, %Result{status: :warn, message: "Warn", timestamp: 2}} == checks["check-2"]
   end
 
-  test "generates expected report" do
+  test "generates report in configured schema" do
     check1 = make_check("check-1")
     check2 = make_check("check-2")
     {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
@@ -81,9 +76,24 @@ defmodule ScoreBoardTest do
     {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}}, state)
     {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", %Result{status: :error, message: "Error", timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)}}, state)
 
-    {:reply, report, ^state} = ScoreBoard.handle_call(:report, self(), state)
+    {:reply, report, ^state} = ScoreBoard.handle_call({:report, nil}, self(), state)
 
-    assert %{systemCode: "test-app", count: 2} = report
+    assert %TestSchema{systemCode: "test-app", count: 2} = report
+  end
+
+  testschema TestSchema2
+
+  test "generates report in desired schema" do
+    check1 = make_check("check-1")
+    check2 = make_check("check-2")
+    {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
+
+    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}}, state)
+    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", %Result{status: :error, message: "Error", timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)}}, state)
+
+    {:reply, report, ^state} = ScoreBoard.handle_call({:report, TestSchema2}, self(), state)
+
+    assert %TestSchema2{systemCode: "test-app", count: 2} = report
   end
 
   defp make_check(id) do

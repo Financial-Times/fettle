@@ -16,10 +16,10 @@ defmodule Fettle do
 
   def report(nil), do: Fettle.ScoreBoard.report()
 
-  def report(schema) when is_atom(schema) do
-    case Schema.complies(schema) do
-      :ok ->
-        Fettle.ScoreBoard.report(schema) # use compliant schema
+  def report(schema_module) when is_atom(schema_module) do
+    case Schema.complies(schema_module) do
+      ^schema_module ->
+        Fettle.ScoreBoard.report(schema_module) # use compliant schema
       {:error, err} -> raise ArgumentError, err
     end
   end

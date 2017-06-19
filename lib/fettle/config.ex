@@ -159,20 +159,9 @@ defmodule Fettle.Config do
 
     {
       spec,
-      check_module_is_checker!(module),
+      Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1}),
       options || []
     }
-  end
-
-  def check_module_is_checker!(module) do
-    case Code.ensure_loaded(module) do
-      {:module, ^module} ->
-        case Kernel.function_exported?(module, :check, 1) do
-          true -> module
-          false -> raise ArgumentError, "Module #{module} does not comply to Fettle.Checker behaviour (no check/1 function)"
-        end
-      {:error, error} -> raise ArgumentError, "Cannot load module #{module}: #{error}"
-    end
   end
 
   def interpolate_panic_guide_url(nil, app_url), do: app_url

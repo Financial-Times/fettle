@@ -14,18 +14,6 @@ defmodule Fettle.Schema do
   def complies(nil), do: {:error, nil}
 
   def complies(module) when is_atom(module) do
-    loaded_exported = {
-      Code.ensure_loaded(module),
-      function_exported?(module, :to_schema, 2)
-    }
-
-    case loaded_exported do
-      {{:module, _module}, true} ->
-        :ok
-      {{:error, err}, _} ->
-        {:error, "Unable to load Schema #{module} - #{inspect err}"}
-      {{:module, _module}, false} ->
-        {:error, "#{module} does not comply to @behaviour #{__MODULE__}"}
-    end
+    Fettle.Util.check_module_complies(module, __MODULE__, {:to_schema, 2})
   end
 end

@@ -48,6 +48,11 @@ defmodule Fettle.RunnerSupervisor do
     Supervisor.start_child(via(), [spec, check_fun, runner_opts])
   end
 
+  @doc "Return the number of checks currently configured."
+  def count_checks do
+    Supervisor.count_children(via()).workers
+  end
+
   defp via do
     # register/lookup proc via the Registry
     {:via, Registry, {Fettle.Registry, __MODULE__}}

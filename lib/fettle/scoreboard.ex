@@ -40,6 +40,11 @@ defmodule Fettle.ScoreBoard do
     GenServer.call(via(), {:new, spec})
   end
 
+  @doc "Return the number of checks currently configured."
+  def count_checks do
+    GenServer.call(via(), :count)
+  end
+
   defp via do
     # register/lookup proc via the Registry
     {:via, Registry, {Fettle.Registry, __MODULE__}}
@@ -91,6 +96,11 @@ defmodule Fettle.ScoreBoard do
     report_mod = schema || app.schema || @default_schema
     report = report_mod.to_schema(app, Map.values(checks))
     {:reply, report, state}
+  end
+
+  @doc false
+  def handle_call(:count, _pid, state = {_app, checks}) do
+    {:reply, length(Map.keys(checks)), state}
   end
 
 end

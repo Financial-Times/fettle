@@ -6,12 +6,18 @@ defmodule Fettle do
   """
   alias Fettle.Schema
 
-  def add(spec = %Fettle.Spec{}, {module, opts}) do
+  @doc "Add a new health-check spec and module for periodic execution"
+  def add(spec = %Fettle.Spec{}, module), do: add(spec, module, [])
+
+  @doc "Add a new health-check spec and module with options for periodic execution"
+  def add(spec = %Fettle.Spec{}, module, opts) when is_atom(module) and is_list(opts) do
     Fettle.ScoreBoard.new(spec)
     Fettle.RunnerSupervisor.start_check({spec, module, opts})
+    :ok
   end
 
-  @spec report(schema_module :: atom | nil) :: Schema.Report.t
+  @doc "Report in the current health check status."
+  @spec report(schema_module :: atom | nil) :: Schema.report
   def report(schema_module \\ nil)
 
   def report(nil), do: Fettle.ScoreBoard.report()

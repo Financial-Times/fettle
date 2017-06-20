@@ -35,7 +35,7 @@ defmodule FettleTest do
       no_of_checks = Fettle.RunnerSupervisor.count_checks()
 
       spec = %Fettle.Spec{id: "test-check", name: "test-check"}
-      :ok = Fettle.add(spec, TestCheck, [])
+      :ok = Fettle.add(spec, TestCheck)
 
       assert Fettle.ScoreBoard.count_checks() == no_of_checks + 1
       assert Fettle.RunnerSupervisor.count_checks() == no_of_checks + 1

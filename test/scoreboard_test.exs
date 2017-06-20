@@ -59,8 +59,11 @@ defmodule ScoreBoardTest do
     {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
 
     {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", Result.new(:ok, "OK", 1)}, state)
+    assert {:reply, true, _} = ScoreBoard.handle_call(:ok?, self(), state)
     {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", Result.new(:warn, "Warn", 2)}, state)
+    assert {:reply, false, _} = ScoreBoard.handle_call(:ok?, self(), state)
     {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", Result.new(:error, "Error", 3)}, state)
+    assert {:reply, false, _} = ScoreBoard.handle_call(:ok?, self(), state)
 
     {_app, checks} = state
 

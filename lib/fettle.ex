@@ -30,5 +30,10 @@ defmodule Fettle do
     end
   end
 
+  @doc "Check if all tests are in a healthy state."
+  def ok? do
+    Fettle.ScoreBoard.ok?()
+  end
+
 end
 

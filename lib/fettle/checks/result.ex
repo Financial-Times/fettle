@@ -1,5 +1,5 @@
 defmodule Fettle.Checker.Result do
-  @moduledoc "Checker result struct which is returned from health check functions."
+  @moduledoc "Result struct which is returned from `Fettle.Checker` functions."
 
   defstruct [:status, :message, :timestamp]
 

@@ -2,22 +2,33 @@ defmodule Fettle.Runner do
   @moduledoc """
   Runs a health check periodically.
 
-  The checks are spawned in a separate process, which is monitored for failure, and sends results
-  back to the runner as a `Fettle.Checker.Result`.
+  The `start_link/4` function is called by the `Fettle.RunnerSupervisor` to start the server,
+  passing the config, check spec, zero-arity check function to run, and options from check
+  configuration (minus the `:args` which are already part of the function).
 
-  The first check is started after an initial delay (`:initial_delay_ms`), then checks are
-  scheduled to run `:period_ms` after completion of the previous check..
+  When a check is scheduled to run, the server spawns the check function in a separate, monitored process,
+  which will send the result back to the runner as a `Fettle.Checker.Result`.
 
-  If a timeout occurs before a result is received, the check enters error status,
-  and the checker process is killed.
+  The first check execution is scheduled after an initial delay (`:initial_delay_ms`), then the
+  check is scheduled to run `:period_ms` after completion of the previous check. i.e. the period
+  does not include the time it takes to actually run the check, just the time between completions
+  (or time-outs); effectively the period defines the maximum rate that a check will run.
+
+  If a timeout (`:timeout_ms`) occurs before a result is received, the check enters error status,
+  and the spawned checker process is killed by the `Runner`.
 
   Results are forwarded to the `Fettle.ScoreBoard` process.
+
+  ## See also
+  * `Fettle.RunnerSupervisor` - starts and supervises `Runner` processes.
+
   """
 
   use GenServer
 
   require Logger
 
+  alias Fettle.Config
   alias Fettle.Checker
   alias Fettle.Spec
 
@@ -31,7 +42,7 @@ defmodule Fettle.Runner do
     :scoreboard
   ]
 
-  @typedoc "check configuration"
+  @typedoc "runner configuration"
   @type t :: %__MODULE__{
     id: String.t, # id of check
     fun: function, # function/0 to spawn to run test
@@ -39,23 +50,27 @@ defmodule Fettle.Runner do
     task: {pid, reference} | nil, # current executing test task
     period_ms: integer, # period of tests
     timeout_ms: integer, # timeout of tests
-    scoreboard: atom # mostly for testing
+    scoreboard: atom # so we can set an alternate module for testing
   }
 
-  def start_link(config, spec, fun, opts) do
+  @doc "start the runner for the given check."
+  @spec start_link(config :: Config.t, spec :: Spec.t, fun :: (() -> Checker.Result.t), opts :: Keyword.t) :: GenServer.on_start
+  def start_link(config = %Config{}, spec = %Spec{}, fun, opts) when is_function(fun, 0) and is_list(opts) do
     Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [config, spec, fun, opts]}" end)
 
     GenServer.start_link(__MODULE__, [config, spec, fun, opts])
   end
 
-  def init(args = [config = %Fettle.Config{}, spec = %Spec{}, fun, opts]) when is_function(fun, 0) and is_list(opts) do
+  @doc false
+  def init(args = [config = %Config{}, spec = %Spec{}, fun, opts]) when is_function(fun, 0) and is_list(opts) do
     Logger.debug(fn -> "#{__MODULE__} init #{inspect args}" end)
+
     initial_delay_ms = opts[:initial_delay_ms] || config.initial_delay_ms || raise ArgumentError, "Need initial_delay_ms"
     period_ms = opts[:period_ms] || config.period_ms || raise ArgumentError, "Need period_ms"
     timeout_ms = opts[:timeout_ms] || config.timeout_ms || raise ArgumentError, "Need timeout_ms"
 
     scoreboard = opts[:scoreboard] || Fettle.ScoreBoard
-    if(not(is_atom(scoreboard)), do: (raise ArgumentError, "scoreboard should be module atom"))
+    Fettle.Util.check_module_complies!(scoreboard, Fettle.ScoreBoard, {:result, 2})
 
     initial_result = Checker.Result.ok("Not run yet")
 
@@ -64,16 +79,16 @@ defmodule Fettle.Runner do
     {:ok, %__MODULE__{id: spec.id, fun: fun, period_ms: period_ms, timeout_ms: timeout_ms, result: initial_result, scoreboard: scoreboard}}
   end
 
-  def handle_info({:result, result}, state = %__MODULE__{}) do
-    # receive result from healthcheck:
-    # store and forward to ScoreBoard
+  @doc "Receives result from healthcheck, stores and forwards to `Fettle.ScoreBoard`"
+  def handle_info({:result, result = %Checker.Result{}}, state = %__MODULE__{}) do
     Logger.debug(fn -> "Healthcheck #{state.id} result is #{String.upcase(Atom.to_string(result.status))}: #{result.message}" end)
+
     :ok = (state.scoreboard).result(state.id, result)
     {:noreply, %{state | result: result}}
   end
 
+  @doc "Runs healthcheck, and schedules timeout"
   def handle_info(:scheduled_check, state = %__MODULE__{id: id, fun: fun}) do
-    # run healthcheck and schedule timeout
     runner = self()
     task = spawn_monitor(fn ->
       Logger.debug(fn -> "Running healthcheck #{id}" end)
@@ -84,7 +99,7 @@ defmodule Fettle.Runner do
     {:noreply, %{state | task: task}, state.timeout_ms}
   end
 
-  @doc "Handle timeout before we receive a health message"
+  @doc "Handles if a timeout occurs before we receive a result message"
   def handle_info(:timeout, state = %__MODULE__{task: {pid, _ref}}) do
     # check has timed out
     Logger.info(fn -> "Healthcheck #{state.id} timed out" end)
@@ -96,6 +111,7 @@ defmodule Fettle.Runner do
     {:noreply, %{state | task: nil, result: timeout_result}}
   end
 
+  @doc false
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
     # sub-process exited normally: reschedule
     schedule_check(state.period_ms)
@@ -103,6 +119,7 @@ defmodule Fettle.Runner do
     {:noreply, %{state | task: nil}}
   end
 
+  @doc false
   def handle_info({:DOWN, _ref, :process, _pid, :killed}, state) do
     # sub-process was killed, hopefully by us: reschedule
     Logger.debug(fn -> "Healthcheck #{state.id} was killed" end)
@@ -111,6 +128,7 @@ defmodule Fettle.Runner do
     {:noreply, %{state | task: nil}}
   end
 
+  @doc false
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
     # sub-process died, reschedule check
     Logger.warn(fn -> "Checker process for #{state.id} died: #{inspect reason}" end)
@@ -120,7 +138,7 @@ defmodule Fettle.Runner do
     {:noreply, %{state | result: Checker.Result.error(inspect reason)}}
   end
 
-  def schedule_check(ms) do
+  defp schedule_check(ms) do
     Process.send_after(self(), :scheduled_check, ms)
   end
 end

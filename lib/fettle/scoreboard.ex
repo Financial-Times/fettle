@@ -19,13 +19,19 @@ defmodule Fettle.ScoreBoard do
   @default_schema Fettle.Schema.FTHealthCheckV1
 
   @type check :: {Spec.t, Checker.Result.t}
-  @type checks :: %{required(String.t) => check}
+  @type checks :: %{required(String.t) => check} # spec.id => check
   @type state :: {Config.t, checks}
 
   @doc "Produces a health report in a desired schema format."
   @spec report(schema :: atom) :: Schema.Report.t
   def report(schema \\ nil) do
     GenServer.call(via(), {:report, schema})
+  end
+
+  @doc "Check if all tests are in a healthy (`:ok`) state."
+  @spec ok?() :: boolean
+  def ok?() do
+    GenServer.call(via(), :ok?)
   end
 
   @doc "Report a new health check result."
@@ -101,6 +107,16 @@ defmodule Fettle.ScoreBoard do
   @doc false
   def handle_call(:count, _pid, state = {_app, checks}) do
     {:reply, length(Map.keys(checks)), state}
+  end
+
+  @doc false
+  def handle_call(:ok?, _pid, state = {_app, checks}) do
+    ok? =
+      checks
+      |> Map.values
+      |> Enum.all?(fn {_spec, result} -> result.status == :ok end)
+
+    {:reply, ok?, state}
   end
 
 end

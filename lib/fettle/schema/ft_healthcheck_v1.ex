@@ -1,11 +1,14 @@
 defmodule Fettle.Schema.FTHealthCheckV1 do
-  @moduledoc "Implements the FT Health Check Schema V1."
+  @moduledoc """
+  Implements the [FT Health Check Schema V1](../../../FTHealthcheckstandard.pdf).
+  """
 
   @behaviour Fettle.Schema
 
   @schemaVersion 1
 
   defmodule CheckResult do
+    @moduledoc "A single check result"
 
     defstruct [
       :id,
@@ -34,6 +37,7 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   end
 
   defmodule Report do
+    @moduledoc "The top-level FT Healthcheck V1 report."
 
     defstruct [
       :schemaVersion,

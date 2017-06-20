@@ -7,7 +7,7 @@ Elixir implementation of FT Health-Check standard.
 
 This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. 
 
-Ships with the [FT Health Check V1](https://docs.google.com/document/d/18hefJjImF5IFp9WvPAm9Iq5_GmWzI9ahlKSzShpQl1s/edit) schema format for report generation, but the schema is configurable.
+Ships with the [FT Health Check V1](FTHealthcheckstandard.pdf) schema format for report generation, but the schema is configurable.
 
 ## Getting Started
 

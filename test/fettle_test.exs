@@ -3,6 +3,11 @@ defmodule FettleTest do
 
   import Fettle.TestMacros
 
+  setup do
+    Application.ensure_all_started(:fettle)
+    :ok
+  end
+
   describe "reports" do
 
     testschema TestSchema

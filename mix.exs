@@ -38,7 +38,7 @@ defmodule Fettle.Mixfile do
 
   defp description do
     """
-.
+    Runs health-check functions periodically, and aggregates health status reports.
     """
   end
 

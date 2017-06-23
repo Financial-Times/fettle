@@ -1,13 +1,21 @@
 # Fettle
 
-Elixir implementation of FT Health-Check standard.
+Runs health-check functions periodically, and aggregates health status reports.
 
-> **fettle** 
+(AKA Elixir implementation of FT Health-Check standard).
+
+> **fettle**
 *noun* - "his best players were in fine fettle": shape, trim, fitness, physical fitness, health, state of health; condition, form, repair, state of repair, state, order, working order, way; informal: kilter; British informal: nick.
 
-This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. 
+This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. It
+is designed for use with monitoring and dash-boards in a DevOps microservice environment.
 
 Ships with the [FT Health Check V1](FTHealthcheckstandard.pdf) schema format for report generation, but the schema is configurable.
+
+## See also 
+
+* [`fettle_plug`](https://github.com/Financial-Times/fettle_plug) - integration with [Plug](https://github.com/elixir-lang/plug) to expose to HTTP.
+* [`fettle_checks`](https://github.com/Financial-Times/fettle_checks) - a small library of commonly useful checks.
 
 ## Getting Started
 
@@ -62,6 +70,6 @@ config :fettle,
 
 On application start-up, Fettle will start running your check, by default every 30 seconds, and you can retrieve the results using `Fettle.report/1`.
 
-`fettle_plug` can then be used to expose the results over an HTTP end-point.
+[`fettle_plug`](https://github.com/Financial-Times/fettle_plug) can then be used to expose the results over an HTTP end-point.
 
 See module docs for full details.

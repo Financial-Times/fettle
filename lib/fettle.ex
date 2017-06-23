@@ -1,9 +1,14 @@
 defmodule Fettle do
   @moduledoc """
-  Direct API for health checks.
+  Dynamic API for configuring health checks, and interacting with health state.
 
-  Normally healthchecks are auto-configured via config.
+  Normally healthchecks are auto-configured via config, but can be added at any time,
+  which may be useful in certain circumstances.
+
+  This module also provides functions for obtaining the current state of checks,
+  either in a form supported by a `Fettle.Schema` module, or a simple boolean.
   """
+
   alias Fettle.Schema
 
   @doc "Add a new health-check spec and module for periodic execution"

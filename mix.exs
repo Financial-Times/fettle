@@ -9,6 +9,10 @@ defmodule Fettle.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      aliases: [test: "test --no-start"],
+     source_url: "https://github.com/Financial-Times/fettle",
+     description: description(),
+     package: package(),
+     docs: docs(),
      deps: deps()]
   end
 
@@ -24,6 +28,24 @@ defmodule Fettle.Mixfile do
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_),     do: ["lib"]
+
+  def package do
+    [
+      maintainers: ["Ellis Pritchard"],
+      licenses: ["MIT"],
+      links: %{"Github" => "https://github.com/Financial-Times/fettle"} ]
+  end
+
+  defp description do
+    """
+.
+    """
+  end
+
+  def docs do
+    [main: "readme",
+     extras: ["README.md"]]
+  end
 
   # Dependencies can be Hex packages:
   #

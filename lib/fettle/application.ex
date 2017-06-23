@@ -25,6 +25,8 @@ defmodule Fettle.Application do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
+    DeferredConfig.populate(:fettle)
+
     env = Application.get_all_env(:fettle)
     app_config = Keyword.drop(env, [:checks]) |> Enum.into(Map.new) |> Config.to_app_config()
     checks = env[:checks] || []

@@ -66,27 +66,31 @@ defmodule ConfigTest do
   describe "check configuration" do
 
     test "specified properties override defaults" do
-      app = %Config{
+      config = %Config{
         panic_guide_url: "urlx",
         business_impact: "bix",
-        technical_summary: "tsx"
+        technical_summary: "tsx",
+        period_ms: 10_000,
+        initial_delay_ms: 15_000,
+        timeout_ms: 5_000
       }
 
-      check = {
-        %{
+      check = %{
           id: "test-1-id",
           name: "test-1",
           description: "Test 1",
           panic_guide_url: "url1",
           business_impact: "bi1",
           technical_summary: "ts1",
-          severity: 2
-        },
-        Fettle.AlwaysHealthyCheck,
-        [opt: 1]
+          severity: 2,
+          period_ms: 11_000,
+          initial_delay_ms: 8_000,
+          timeout_ms: 20_000,
+          checker: Fettle.AlwaysHealthyCheck,
+          args: [opt: 1]
       }
 
-      {spec, module, config} = Config.check_from_config(check, app)
+      {spec, module, args} = Config.check_from_config(check, config)
 
       assert spec == %Fettle.Spec{
         id: "test-1-id",
@@ -95,32 +99,36 @@ defmodule ConfigTest do
         panic_guide_url: "url1",
         business_impact: "bi1",
         technical_summary: "ts1",
-        severity: 2
+        severity: 2,
+        period_ms: 11_000,
+        initial_delay_ms: 8_000,
+        timeout_ms: 20_000
       }
 
       assert module == Fettle.AlwaysHealthyCheck
-      assert config == [opt: 1]
+      assert args == [opt: 1]
 
     end
 
     test "uses defaults from top-level config" do
-      app = %Config{
+      config = %Config{
         panic_guide_url: "urlx",
         business_impact: "bix",
-        technical_summary: "tsx"
+        technical_summary: "tsx",
+        initial_delay_ms: 1000,
+        timeout_ms: 2000,
+        period_ms: 3000
       }
 
-      check = {
-        %{
-          name: "test-1",
-          panic_guide_url: "",
-          business_impact: nil
-        },
-        Fettle.AlwaysHealthyCheck,
-        [a: 1, b: 2]
+      check = %{
+        name: "test-1",
+        panic_guide_url: "",
+        business_impact: nil,
+        checker: Fettle.AlwaysHealthyCheck,
+        args: [a: 1]
       }
 
-      {spec, module, check_opts} = Config.check_from_config(check, app)
+      {spec, module, args} = Config.check_from_config(check, config)
 
       assert spec == %Fettle.Spec{
         id: "test-1",
@@ -129,68 +137,76 @@ defmodule ConfigTest do
         panic_guide_url: "urlx",
         business_impact: "bix",
         technical_summary: "tsx",
-        severity: 1
+        severity: 1,
+        initial_delay_ms: 1000,
+        timeout_ms: 2000,
+        period_ms: 3000
       }
 
       assert module == Fettle.AlwaysHealthyCheck
-      assert check_opts == [a: 1, b: 2]
+      assert args == [a: 1]
     end
 
-    test "check module options are optional" do
-      check = {
-        %{
-          name: "test-1",
-          panic_guide_url: "urlx",
-          business_impact: "bix",
-          technical_summary: "tsx"
-        },
-        Fettle.AlwaysHealthyCheck
+    test "check module args are optional" do
+      config = config()
+
+      check = %{
+        name: "test-1",
+        checker: Fettle.AlwaysHealthyCheck
       }
 
-      {_spec, _module, config} = Config.check_from_config(check, %Config{})
+      {_spec, _module, args} = Config.check_from_config(check, config)
 
-      assert config == []
+      assert args == []
     end
 
     test "missing required properties raise error" do
+      minimal_config = %Config{initial_delay_ms: 1, period_ms: 1, timeout_ms: 1}
+
       spec = %{
           name: "Name",
           panic_guide_url: "urlx",
           business_impact: "bix",
-          technical_summary: "tsx"
+          technical_summary: "tsx",
+          checker: Fettle.AlwaysHealthyCheck
       }
 
       # missing required field
-      for field <- [:name, :panic_guide_url, :business_impact, :technical_summary] do
+      for field <- [:name, :panic_guide_url, :business_impact, :technical_summary, :checker] do
         assert_raise ArgumentError, ~r/#{field}/, fn ->
-          {
-            Map.delete(spec, field),
-            Fettle.AlwaysHealthyCheck
-          } |> Config.check_from_config(%Config{})
+          Map.delete(spec, field)
+          |> Config.check_from_config(minimal_config)
         end
       end
 
       # required field is nil
-      for field <- [:name, :panic_guide_url, :business_impact, :technical_summary] do
+      for field <- [:name, :panic_guide_url, :business_impact, :technical_summary, :checker] do
         assert_raise ArgumentError, ~r/#{field}/, fn ->
-          {
-            Map.put(spec, field, nil),
-            Fettle.AlwaysHealthyCheck
-          } |> Config.check_from_config(%Config{})
+            Map.put(spec, field, nil)
+            |> Config.check_from_config(minimal_config)
         end
       end
 
       # required field is empty string
       for field <- [:name, :panic_guide_url, :business_impact, :technical_summary] do
         assert_raise ArgumentError, ~r/#{field}/, fn ->
-          {
-            Map.put(spec, field, ""),
-            Fettle.AlwaysHealthyCheck
-          } |> Config.check_from_config(%Config{})
+            Map.put(spec, field, "")
+            |> Config.check_from_config(minimal_config)
         end
       end
 
     end
+  end
+
+  def config() do
+    %Config{
+      panic_guide_url: "pgu",
+      business_impact: "bi",
+      technical_summary: "ts",
+      initial_delay_ms: 1000,
+      timeout_ms: 2000,
+      period_ms: 3000
+    }
   end
 
 end

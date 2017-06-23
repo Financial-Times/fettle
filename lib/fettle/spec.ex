@@ -3,7 +3,7 @@ defmodule Fettle.Spec do
   Describes health-check meta-data, created from configuration and used
   to generate reports.
 
-  All the fields are mandatory, but some can be provided from the
+  All the fields must have values, but some can be provided from the
   global config, see `Fettle.Config`.
 
   | Field | Summary | Default |
@@ -15,6 +15,9 @@ defmodule Fettle.Spec do
   | `panic_guide_url` | URL for Ops to go to when check fails | required, but can default to config value |
   | `business_impact` | What business process will be impacted if check fails | required, but can default to config value |
   | `technical_summary` | What has gone wrong, technically, if check fails | required, but can default to config value |
+  | `initial_delay_ms` | Number of milliseconds to wait before running first check | defaults from config |
+  | `period_ms` | Number of milliseconds to wait between runs of the same check | defaults from config |
+  | `timeout_ms` | Number of milliseconds to wait before timing-out a running check | defaults from config |
 
   """
 
@@ -25,7 +28,10 @@ defmodule Fettle.Spec do
     :severity,
     :panic_guide_url,
     :business_impact,
-    :technical_summary
+    :technical_summary,
+    :initial_delay_ms,
+    :period_ms,
+    :timeout_ms
   ]
 
   @type severity :: 1 | 2 | 3
@@ -37,7 +43,10 @@ defmodule Fettle.Spec do
     severity: severity,
     panic_guide_url: String.t,
     business_impact: String.t,
-    technical_summary: String.t
+    technical_summary: String.t,
+    initial_delay_ms: non_neg_integer,
+    period_ms: non_neg_integer,
+    timeout_ms: non_neg_integer
   }
 
 end

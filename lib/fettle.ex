@@ -9,10 +9,10 @@ defmodule Fettle do
   @doc "Add a new health-check spec and module for periodic execution"
   def add(spec = %Fettle.Spec{}, module), do: add(spec, module, [])
 
-  @doc "Add a new health-check spec and module with options for periodic execution"
-  def add(spec = %Fettle.Spec{}, module, opts) when is_atom(module) and is_list(opts) do
+  @doc "Add a new health-check spec and module and arguments for periodic execution"
+  def add(spec = %Fettle.Spec{}, module, args) when is_atom(module) and is_list(args) do
     Fettle.ScoreBoard.new(spec)
-    Fettle.RunnerSupervisor.start_check({spec, module, opts})
+    Fettle.RunnerSupervisor.start_check({spec, module, args})
     :ok
   end
 

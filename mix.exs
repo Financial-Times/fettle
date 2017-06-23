@@ -36,6 +36,7 @@ defmodule Fettle.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
+     {:deferred_config, "~> 0.1.0"},
      {:credo, "~> 0.5", only: [:dev, :test]},
      {:mix_test_watch, "~> 0.3", only: :dev, runtime: false},
      {:ex_doc, "~> 0.14", only: :dev, runtime: false},

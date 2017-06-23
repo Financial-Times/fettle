@@ -1,6 +1,40 @@
 defmodule Fettle.Schema.FTHealthCheckV1 do
   @moduledoc """
   Implements the [FT Health Check Schema V1](../../../FTHealthcheckstandard.pdf).
+
+  JSON serialized output is of form:
+  ```json
+  {
+    "schemaVersion": 1,
+    "systemCode": "code",
+    "name": "name of system",
+    "decription": "description of system",
+    "checks": [
+      {
+        "id": "healthcheck-id-1",
+        "name": "healthcheck name",
+        "ok": false,
+        "severity": 1,
+        "businessImpact": "description",
+        "technicalSummary": "description",
+        "panicGuide": "https://...",
+        "checkOutput": "message from check",
+        "lastUpdated": "2017-06-23T09:13:24Z"
+      }
+    ]
+  }
+  ```
+  Most fields fairly obviously map to config, however:
+
+  * `checkOutput` is the `Fettle.Checker.Result.message` field.
+  * `ok` is `false` if the `Fettle.Checker.Result.status` is not `:ok`.
+  * `lastUpdated` is the `Fettle.Checker.Result.timestamp` field as ISO-8601 UTC DateTime.
+
+  Note that the `:warn` and `:error` states are not exposed by this standard other than
+  as the computed value of `ok`; the FT instead uses the (non-dynamic) `severity` to show
+  different levels of alert on dash-boards, with the intention of using multiple checks for
+  to distinguish between errors and warnings.
+
   """
 
   @behaviour Fettle.Schema
@@ -8,7 +42,7 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   @schemaVersion 1
 
   defmodule CheckResult do
-    @moduledoc "A single check result"
+    @moduledoc "A single FT Healthcheck V1 check result"
 
     defstruct [
       :id,
@@ -70,11 +104,13 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
     }
   end
 
+  @doc false
   @spec results_to_schema([Api.check]) :: [CheckResult.t]
   def results_to_schema(results) when is_list(results) do
     Enum.map(results, &result_to_schema/1)
   end
 
+  @doc false
   @spec result_to_schema(Api.check) :: CheckResult.t
   def result_to_schema({healthcheck = %Spec{}, %Fettle.Checker.Result{status: status, message: msg, timestamp: ts}}) do
     %CheckResult{

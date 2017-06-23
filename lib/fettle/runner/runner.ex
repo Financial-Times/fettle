@@ -3,8 +3,7 @@ defmodule Fettle.Runner do
   Runs a health check periodically.
 
   The `start_link/4` function is called by the `Fettle.RunnerSupervisor` to start the server,
-  passing the config, check spec, zero-arity check function to run, and options from check
-  configuration (minus the `:args` which are already part of the function).
+  passing the check spec, zero-arity check function to run.
 
   When a check is scheduled to run, the server spawns the check function in a separate, monitored process,
   which will send the result back to the runner as a `Fettle.Checker.Result`.
@@ -42,7 +41,7 @@ defmodule Fettle.Runner do
     :scoreboard
   ]
 
-  @typedoc "runner configuration"
+  @typedoc "runner state"
   @type t :: %__MODULE__{
     id: String.t, # id of check
     fun: function, # function/0 to spawn to run test
@@ -56,7 +55,7 @@ defmodule Fettle.Runner do
   @doc "start the runner for the given check."
   @spec start_link(config :: Config.t, spec :: Spec.t, fun :: (() -> Checker.Result.t), opts :: Keyword.t) :: GenServer.on_start
   def start_link(config = %Config{}, spec = %Spec{}, fun, opts) when is_function(fun, 0) and is_list(opts) do
-    Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [config, spec, fun, opts]}" end)
+    Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [spec, fun, opts]}" end)
 
     GenServer.start_link(__MODULE__, [config, spec, fun, opts])
   end
@@ -65,9 +64,9 @@ defmodule Fettle.Runner do
   def init(args = [config = %Config{}, spec = %Spec{}, fun, opts]) when is_function(fun, 0) and is_list(opts) do
     Logger.debug(fn -> "#{__MODULE__} init #{inspect args}" end)
 
-    initial_delay_ms = opts[:initial_delay_ms] || config.initial_delay_ms || raise ArgumentError, "Need initial_delay_ms"
-    period_ms = opts[:period_ms] || config.period_ms || raise ArgumentError, "Need period_ms"
-    timeout_ms = opts[:timeout_ms] || config.timeout_ms || raise ArgumentError, "Need timeout_ms"
+    initial_delay_ms = spec.initial_delay_ms || config.initial_delay_ms || raise ArgumentError, "Need initial_delay_ms"
+    period_ms = spec.period_ms || config.period_ms || raise ArgumentError, "Need period_ms"
+    timeout_ms = spec.timeout_ms || config.timeout_ms || raise ArgumentError, "Need timeout_ms"
 
     scoreboard = opts[:scoreboard] || Fettle.ScoreBoard
     Fettle.Util.check_module_complies!(scoreboard, Fettle.ScoreBoard, {:result, 2})

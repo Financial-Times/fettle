@@ -2,34 +2,43 @@ defmodule Fettle.Config do
   @moduledoc """
   Processes configuration for healthchecks into internal structures.
 
-  The `:ft_health` OTP application expects to find configuration under its OTP name,
+  The `:fettle` OTP application expects to find configuration under its OTP name,
   with at least the mandatory fields specified. e.g.
 
   ```
-    config :ft_health,
-      system_code: :ft_health_test, # NB mandatory
-      name: "FT Health Application",
-      description: "Runs healthchecks",
+    config :fettle,
+      system_code: :my_app, # NB mandatory
+      name: "My Application",
+      description: "My Application provides...",
       panic_guide_url: "https://stackoverflow.com",
       initial_delay_ms: 1_000,
-      check_period_ms: 30_000,
-      check_timeout_ms: 2_000,
+      period_ms: 30_000,
+      timeout_ms: 2_000,
       checks: [ ... ]
   ```
 
   | Key | Description | Required or Defaults |
   | ----- | ----------- | -------------------- |
   | `system_code` | System code for report | Required |
-  | `schema` | Module for report generation | default `Fettle.Schema.FTHealthCheckV1` |
+  | `schema` | Module for report generation | `Fettle.Schema.FTHealthCheckV1` |
   | `name` | Human-readable name of system | defaults to `system_code` |
   | `description` | Human-readable description of system | defaults to `system_code` |
-  | `initial_delay_ms` | Number of milliseconds to wait before running first check | defaults to `0` |
-  | `check_period_ms` | Number of milliseconds to wait between runs of the same check | defaults to `30_000` |
-  | `timeout_ms` | Number of milliseconds to wait before timing-out a running check | defaults to `5000` |
-  | `panic_guide_url` | A default URL for health check panic guides if not specified | Only required if not configured for each check |
-  | `business_impact` | A default description for health checks if not specified | Only required if not configured for each check |
-  | `technical_summary` | A default description for health checks if not specified | Only required if not configured for each check |
-  | `checks` | An array of pre-configured health-check tuples | Optional |
+  | `initial_delay_ms` | Number of milliseconds to wait before running first check | `0` |
+  | `period_ms` | Number of milliseconds to wait between runs of the same check | `30_000` |
+  | `timeout_ms` | Number of milliseconds to wait before timing-out a running check | `5000` |
+  | `panic_guide_url` | URL of documentation for check | <sup>1</sup> <sup>2</sup> |
+  | `business_impact` | Which business function is affected? | <sup>1</sup> |
+  | `technical_summary` | Technical description for Ops | <sup>1</sup> |
+  | `checks` | An array of pre-configured health-check config | Optional, see `Fettle.add/3` <sup>3</sup> |
+
+  1. Specifies default value for checks. Required only if not specified for every check.
+  2. `panic_guide_url` can form the base-url for checks which specify a relative `panic_guide_url`.
+  3. `checks` is an array, but each element can be specified as either a map,
+     or a `Keyword` list (or any other `Enumerable` that yields key-value pairs).
+
+  Fettle uses [DeferredConfig](https://hexdocs.pm/deferred_config) to resolve `{:system, "ENV_VAR"}` style
+  tuples using shell enviroment variables; this works for all config values; remember to convert to the
+  correct type, e.g. `period_ms: {:system, "FETTLE_PERIOD_MS", {String, :to_integer}}`,
   """
 
   alias Fettle.Spec
@@ -51,7 +60,7 @@ defmodule Fettle.Config do
     :technical_summary
   ]
 
-  @typedoc "top-level configuration for global settings and check defaults"
+  @typedoc "Top-level configuration for global settings and check defaults (derived from app config)"
   @type t :: %__MODULE__{
     system_code: atom | String.t,
     name: atom | String.t,
@@ -65,14 +74,14 @@ defmodule Fettle.Config do
     technical_summary: String.t # default for checks
   }
 
-  @typedoc "Tuple which specifies a check derived from config"
-  @type spec_and_mod :: {Spec.t, module, options :: Keyword.t}
+  @typedoc "Tuple which specifies a check (derived from app config)"
+  @type spec_and_mod :: {Spec.t, module, args :: Keyword.t}
 
+  @doc "Parses configuration into `%Fettle.Config{}`"
+  @spec to_app_config(map | list) :: __MODULE__.t
+  def to_app_config(map_or_kws) do
 
-  @spec to_app_config(map) :: __MODULE__.t
-  def to_app_config(map) do
-
-    config = struct(%__MODULE__{}, map)
+    config = struct(%__MODULE__{}, map_or_kws)
 
     config
     |> ensure_keys!([:system_code])
@@ -87,10 +96,21 @@ defmodule Fettle.Config do
   end
 
   @doc """
-  Convert a health check specification from config into a `Fettle.Spec` spec, with module and opts.
+  Convert a single health check specification from config into a `Fettle.Spec` spec, with module and args.
 
-  Config specifies each check as a 3-tuple of health-check metadata, implementation module and options;
-  or a 2-tuple of the first two.
+  Each check is specified as a collection of key-value pairs:
+
+  | Key | Type | Description | Default/Required |
+  | --- | ---- | ----------- | ------- |
+  | `name` | `String` | Name of check | required |
+  | `id` | `String` | Short id of check | Defaults to `name` |
+  | `description` | `String` | Longer description of check | Defaults to `name` |
+  | `panic_guide_url` | `String` | URL of documentation for check | Required, defaults to config |
+  | `business_impact` | `String` | Which business function is affected? | Required, defaults to config |
+  | `technical_summary` | `String` | Technical description for Ops | Required, defaults to config |
+  | `severity` | `1 \| 2 \| 3` | Severity level: 1 high, 3 low | Required, defaults to `1` |
+  | `checker` | `atom` | `Fettle.Checker` module | Required |
+  | `args` | `any` | passed as argument for `Fettle.Checker` module | defaults to [] |
 
   Some fields of the check can be omitted, and the default value from the top-level config will be used
   instead; this applies to all fields except `name`, `full_name`, `id` and `severity`; if `id` is omitted, `name`
@@ -105,31 +125,27 @@ defmodule Fettle.Config do
     panic_guide_url: "http://co.com/docs/service/healthchecks",
     technical_summary: "We'll spend all week repairing the damage.",
     checks: [
-      {
-        %{
-          name: "service-b", # also provides id
-          # full_name will be name
-          panic_guide_url: "#service-b", # appended to top-level url
-          # technical_summary from top-level
-          business_impact: "No sales",
-        },
-        MyHealth.Spec, # implementation module name
-        [
-          period_ms: 10_000, # override default for this check only
-          args: [url: "https://service-b.co.com/__gtg"]
-        ]
+      %{
+        name: "service-b", # also provides id and full_name if those undefined
+        panic_guide_url: "#service-b", # appended to top-level url
+        # technical_summary will come from top-level
+        business_impact: "No sales",
+        period_ms: 10_000, # override default for this check only
+        checker: MyHealth.Spec, # implementation module name
+        args: [url: "https://service-b.co.com/__gtg"] # for `Fettle.Checker.check/1`
+      },
+      %{
+        ...
       }
     ]
   ```
   """
-  @spec check_from_config({map(), atom} | {map(), atom, Keyword.t}, config :: __MODULE__.t) :: spec_and_mod
-  def check_from_config(healthcheck, config)
+  @spec check_from_config(check :: map | list, config :: __MODULE__.t) :: spec_and_mod
+  def check_from_config(check, config)
 
-  def check_from_config({healthcheck, module}, config = %__MODULE__{}), do: check_from_config({healthcheck, module, []}, config)
+  def check_from_config(check, config = %__MODULE__{}) when is_map(check) or is_list(check )do
 
-  def check_from_config({healthcheck, module, options}, config = %__MODULE__{}) when not is_nil(module) and is_atom(module) do
-
-    spec = struct(%Spec{}, healthcheck)
+    spec = struct(%Spec{}, check)
 
     spec =
       spec
@@ -139,12 +155,7 @@ defmodule Fettle.Config do
           technical_summary: config.technical_summary,
           panic_guide_url: config.panic_guide_url
         )
-      |> (fn spec ->
-          {_val, spec} = Map.get_and_update(spec, :panic_guide_url, fn val ->
-            {val, interpolate_panic_guide_url(val, config.panic_guide_url)}
-          end)
-          spec
-        end).()
+      |> interpolate_panic_guide_url(config)
       |> ensure_keys!([
         :name,
         :severity,
@@ -154,20 +165,31 @@ defmodule Fettle.Config do
         ])
       |> default_keys(
         id: spec.name,
-        description: spec.name
+        description: spec.name,
+        initial_delay_ms: config.initial_delay_ms,
+        period_ms: config.period_ms,
+        timeout_ms: config.timeout_ms
       )
 
-    {
-      spec,
-      Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1}),
-      options || []
-    }
+    module = check[:checker] || raise ArgumentError, "Missing checker module for check #{spec.id}."
+    module = Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1})
+
+    args = check[:args] || []
+
+    {spec, module, args}
   end
 
-  def interpolate_panic_guide_url(nil, app_url), do: app_url
-  def interpolate_panic_guide_url("#" <> check_url, app_url) when not is_nil(app_url), do: app_url <> "#" <> check_url
-  def interpolate_panic_guide_url("/" <> check_url, app_url) when not is_nil(app_url), do: app_url <> "/" <> check_url
-  def interpolate_panic_guide_url(check_url, _app_url), do: check_url
+  def interpolate_panic_guide_url(spec = %Spec{}, %__MODULE__{panic_guide_url: config_url}) do
+    {_val, spec} =
+      Map.get_and_update(spec, :panic_guide_url, fn
+        val -> {val, interpolate_panic_guide_url(val, config_url)} end
+      )
+    spec
+  end
+  def interpolate_panic_guide_url(nil, config_url), do: config_url
+  def interpolate_panic_guide_url("#" <> check_url, config_url) when is_binary(config_url), do: config_url <> "#" <> check_url
+  def interpolate_panic_guide_url("/" <> check_url, config_url) when is_binary(config_url), do: config_url <> "/" <> check_url
+  def interpolate_panic_guide_url(check_url, _config_url) when is_binary(check_url), do: check_url
 
   @doc "ensure required keys are not missing, null, or empty strings"
   @spec ensure_keys!(config :: map, required_keys :: list) :: map | no_return

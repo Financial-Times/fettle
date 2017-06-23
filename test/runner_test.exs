@@ -12,20 +12,19 @@ defmodule RunnerTest do
     end
   end
 
-
   test "init runner schedules first check" do
 
     fun = fn -> Result.new(:ok, "OK") end
     opts = [
-      initial_delay_ms: 0,
-      period_ms: 1000,
-      timeout_ms: 5000,
       scoreboard: TestScoreBoard
     ]
+    spec = spec()
 
-    {:ok, state} = Runner.init([config(), spec(), fun, opts])
+    {:ok, state} = Runner.init([config(), spec, fun, opts])
 
-    assert %Runner{id: "test-1", fun: ^fun, result: %Result{status: :ok}, period_ms: 1000, timeout_ms: 5000} = state
+    assert %Runner{id: "test-1", fun: ^fun, result: %Result{status: :ok}} = state
+    assert state.period_ms == spec.period_ms
+    assert state.timeout_ms == spec.timeout_ms
 
     assert_receive :scheduled_check
 
@@ -35,9 +34,6 @@ defmodule RunnerTest do
   test "receive result: updates state and sends to scoreboard" do
     fun = fn -> Result.new(:ok, "OK") end
     opts = [
-      initial_delay_ms: 0,
-      period_ms: 0,
-      timeout_ms: 5000,
       scoreboard: TestScoreBoard
     ]
     {:ok, state} = Runner.init([config(), spec(), fun, opts])
@@ -59,14 +55,14 @@ defmodule RunnerTest do
   end
 
   test "timeout kills check and reschedules" do
-    fun = fn -> Process.sleep(10000) end
+    fun = fn -> Process.sleep(10_000) end
+
     opts = [
-      initial_delay_ms: 0,
-      period_ms: 0,
-      timeout_ms: 5000,
       scoreboard: TestScoreBoard
     ]
-    {:ok, state} = Runner.init([config(), spec(), fun, opts])
+    spec = %{spec() | period_ms: 0}
+
+    {:ok, state} = Runner.init([config(), spec, fun, opts])
 
     assert_receive :scheduled_check
 
@@ -93,12 +89,11 @@ defmodule RunnerTest do
   test "reschedules check when scheduled check exits normally" do
     fun = fn -> Result.ok() end
     opts = [
-      initial_delay_ms: 0,
-      period_ms: 0,
-      timeout_ms: 5000,
       scoreboard: TestScoreBoard
     ]
-    {:ok, state} = Runner.init([config(), spec(), fun, opts])
+    spec = %{spec() | period_ms: 0}
+
+    {:ok, state} = Runner.init([config(), spec, fun, opts])
 
     assert_receive :scheduled_check
 
@@ -121,12 +116,11 @@ defmodule RunnerTest do
   test "reschedules check when scheduled check exits abnormally" do
     fun = fn -> exit(:sad!) end
     opts = [
-      initial_delay_ms: 0,
-      period_ms: 0,
-      timeout_ms: 5000,
       scoreboard: TestScoreBoard
     ]
-    {:ok, state} = Runner.init([config(), spec(), fun, opts])
+    spec = %{spec() | period_ms: 0}
+
+    {:ok, state} = Runner.init([config(), spec, fun, opts])
 
     assert_receive :scheduled_check
 
@@ -160,16 +154,19 @@ defmodule RunnerTest do
   defp spec do
     %Spec{
       id: "test-1",
-      name: "name-of-test-1"
+      name: "name-of-test-1",
+      initial_delay_ms: 0,
+      period_ms: 30_000,
+      timeout_ms: 5000
     }
   end
 
   defp config do
     %Fettle.Config{
-      system_code: "test",
-      panic_guide_url: "panic_guide_url"
+      initial_delay_ms: 0,
+      period_ms: 10000,
+      timeout_ms: 1000
     }
   end
-
 
 end

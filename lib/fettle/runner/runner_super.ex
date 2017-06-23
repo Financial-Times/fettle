@@ -2,20 +2,14 @@ defmodule Fettle.RunnerSupervisor do
   @moduledoc """
   Starts and supervises `Fettle.Runner` processes.
 
-  Checks are started using `start_check/1`, passing a `Fettle.Spec`, defining meta-data
-  use for reporting the status of the check, a module atom, which must implement the
-  `Fettle.Checker` behaviour, i.e. implement a `check/1` function returning a `Fettle.Checker.Result`,
-  and an keyword list of options.
+  `start_link/2` starts the supervisor which creates `Fettle.Runner` processes for a
+  list of checks, potentially from config, linking the current process to the supervisor.
 
-  The options may contain:
+  `start_check/2` is subsequently used for dynamically adding new checks; it takes a tuple
+  `{%Spec{}, Checker, args}` to define the check, and an optional keyword list
+  (which is principally for debugging).
 
-  | key | description | default |
-  | --- | ----------  | ------- |
-  | `args` | arguments to be passed to the `check/1` function | `[]` |
-  | `initial_delay_ms` | delay before starting check | `Fettle.Config` value |
-  | `period_ms` | period between test runs | `Fettle.Config` value |
-  | `timeout_ms` | maximum period to wait for test result | `Fettle.Config` value |
-
+  Clients will normally prefer `Fettle.add/3` to dynamically add checks.
   """
 
   use Supervisor
@@ -53,18 +47,21 @@ defmodule Fettle.RunnerSupervisor do
     end)
   end
 
-  @doc "Start running a check periodically."
+  @doc """
+  Start running a check periodically.
+
+  ### Options
+  `scoreboard` - module providing `Fettle.ScoreBoard.result/2` compatible function (for testing).
+  """
   @spec start_check(check :: Config.spec_and_mod) :: Supervisor.on_start_child
-  def start_check(check) # for docs
+  def start_check(check, opts \\ [])
 
-  def start_check({spec = %Spec{}, module, opts}) when is_atom(module) do
+  def start_check({spec = %Spec{}, module, args}, opts) when is_atom(module) do
     Logger.debug(fn -> "#{__MODULE__} start_check #{inspect spec}" end)
-    runner_opts = Keyword.drop(opts, [:args])
 
-    check_fun_args = opts[:args] || [[]]
-    check_fun = fn -> apply(module, :check, check_fun_args) end
+    check_fun = fn -> apply(module, :check, [args]) end
 
-    Supervisor.start_child(via(), [spec, check_fun, runner_opts])
+    {:ok, _pid} = Supervisor.start_child(via(), [spec, check_fun, opts])
   end
 
   @doc "Return the number of checks currently configured."

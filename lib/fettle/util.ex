@@ -23,4 +23,8 @@ defmodule Fettle.Util do
     end
   end
 
+  def check_module_complies(module, _, _) when not is_atom(module) do
+    raise ArgumentError, "Expected module to be an atom: #{inspect module}."
+  end
+
 end

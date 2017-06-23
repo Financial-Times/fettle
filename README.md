@@ -4,6 +4,8 @@ Runs health-check functions periodically, and aggregates health status reports.
 
 (AKA Elixir implementation of FT Health-Check standard).
 
+[![Inline docs](http://inch-ci.org/github/Financial-Times/fettle.svg)](http://inch-ci.org/github/Financial-Times/fettle) [![Build Status](https://travis-ci.org/Financial-Times/fettle.svg?branch=master)](https://travis-ci.org/Financial-Times/fettle)
+
 > **fettle**
 *noun* - "his best players were in fine fettle": shape, trim, fitness, physical fitness, health, state of health; condition, form, repair, state of repair, state, order, working order, way; informal: kilter; British informal: nick.
 

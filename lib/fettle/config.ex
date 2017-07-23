@@ -75,7 +75,7 @@ defmodule Fettle.Config do
   }
 
   @typedoc "Tuple which specifies a check (derived from app config)"
-  @type spec_and_mod :: {Spec.t, module, args :: Keyword.t}
+  @type spec_and_mod :: {Spec.t, module, init_args :: any}
 
   @doc "Parses configuration into `%Fettle.Config{}`"
   @spec to_app_config(map | list) :: __MODULE__.t
@@ -108,7 +108,7 @@ defmodule Fettle.Config do
   | `panic_guide_url` | `String` | URL of documentation for check | Required, defaults to config |
   | `business_impact` | `String` | Which business function is affected? | Required, defaults to config |
   | `technical_summary` | `String` | Technical description for Ops | Required, defaults to config |
-  | `severity` | `1 \| 2 \| 3` | Severity level: 1 high, 3 low | Required, defaults to `1` |
+  | `severity` | `1-3` | Severity level: 1 high, 3 low | Required, defaults to `1` |
   | `checker` | `atom` | `Fettle.Checker` module | Required |
   | `args` | `any` | passed as argument for `Fettle.Checker` module | defaults to [] |
 
@@ -143,7 +143,7 @@ defmodule Fettle.Config do
   @spec check_from_config(check :: map | list, config :: __MODULE__.t) :: spec_and_mod
   def check_from_config(check, config)
 
-  def check_from_config(check, config = %__MODULE__{}) when is_map(check) or is_list(check )do
+  def check_from_config(check, config = %__MODULE__{}) when is_map(check) or is_list(check) do
 
     spec = struct(%Spec{}, check)
 
@@ -174,11 +174,12 @@ defmodule Fettle.Config do
     module = check[:checker] || raise ArgumentError, "Missing checker module for check #{spec.id}."
     module = Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1})
 
-    args = check[:args] || []
+    init_args = check[:args] || []
 
-    {spec, module, args}
+    {spec, module, init_args}
   end
 
+  @doc "append path parts to top-level config `panic_guide_url` if relative path is given in checker."
   def interpolate_panic_guide_url(spec = %Spec{}, %__MODULE__{panic_guide_url: config_url}) do
     {_val, spec} =
       Map.get_and_update(spec, :panic_guide_url, fn

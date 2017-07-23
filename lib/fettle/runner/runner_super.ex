@@ -6,7 +6,7 @@ defmodule Fettle.RunnerSupervisor do
   list of checks, potentially from config, linking the current process to the supervisor.
 
   `start_check/2` is subsequently used for dynamically adding new checks; it takes a tuple
-  `{%Spec{}, Checker, args}` to define the check, and an optional keyword list
+  `{%Spec{}, CheckerModule, args}` to define the check, and an optional keyword list
   (which is principally for debugging).
 
   Clients will normally prefer `Fettle.add/3` to dynamically add checks.
@@ -56,12 +56,10 @@ defmodule Fettle.RunnerSupervisor do
   @spec start_check(check :: Config.spec_and_mod) :: Supervisor.on_start_child
   def start_check(check, opts \\ [])
 
-  def start_check({spec = %Spec{}, module, args}, opts) when is_atom(module) do
+  def start_check({spec = %Spec{}, module, init_args}, opts) when is_atom(module) do
     Logger.debug(fn -> "#{__MODULE__} start_check #{inspect spec}" end)
 
-    check_fun = fn -> apply(module, :check, [args]) end
-
-    {:ok, _pid} = Supervisor.start_child(via(), [spec, check_fun, opts])
+    {:ok, _pid} = Supervisor.start_child(via(), [spec, {module, init_args}, opts])
   end
 
   @doc "Return the number of checks currently configured."

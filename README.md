@@ -9,8 +9,7 @@ Runs health-check functions periodically, and aggregates health status reports.
 > **fettle**
 *noun* - "his best players were in fine fettle": shape, trim, fitness, physical fitness, health, state of health; condition, form, repair, state of repair, state, order, working order, way; informal: kilter; British informal: nick.
 
-This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. It
-is designed for use with monitoring and dash-boards in a DevOps microservice environment.
+This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. It is intended for use with monitoring and dashboards.
 
 Ships with the [FT Health Check V1](FTHealthcheckstandard.pdf) schema format for report generation, but the schema is configurable.
 
@@ -37,36 +36,38 @@ Fettle is an OTP application, and in Elixir 1.4+, will be started with other app
 
 ### Defining checks
 
-The [`fettle_checks`]() module provides pre-canned checks, but to write your own, implement a module with the `Fettle.Checker` `@behaviour` that runs a check, and returns a `Fettle.Check.Result` struct:
+The [`fettle_checks`](https://github.com/Financial-Times/fettle_checks) module provides pre-canned checks, but to write your own, implement a module with the `Fettle.Checker` `@behaviour` that runs a check, and returns a `Fettle.Check.Result` struct:
 
 ```elixir
 defmodule MyCheck do
   @behaviour Fettle.Checker
 
-  def check(arg) do
-    case do_check(arg) do # assume do_check/1 does something useful!
-        :ok -> Fettle.Check.Result.ok()
-        {:error, message} -> Fettle.Check.Result.error(message)
+  def check(args) do
+    case do_check(args) do  # assume do_check/1 does something useful!
+      :ok -> 
+        {Fettle.Check.Result.ok(), args}
+      {:error, message} -> 
+        {Fettle.Check.Result.error(message), args}
     end
   end
+end
 ```
 
 Then configure this check, with some required metadata, in the `:fettle` configuration:
 
-```elxir
+```elixir
 config :fettle,
     system_code: "my_app", # required (for reports)
     checks: [
-        {
-            %{
-                name: "my-check",
-                panic_guide_url: "https://...",
-                business_impact: "...",
-                technical_summary: "..."
-            },
-            MyCheck, # name of our check module
-            ["something"] # arguments to the module (optional)
-        }
+        %{
+            name: "my-check",
+            panic_guide_url: "https://...",
+            business_impact: "...",
+            technical_summary: "..."
+            checker: MyCheck, # name of our check module
+            args: "url_or_something" # arguments to the checker module (optional)
+        },
+        ...
     ]
 ```
 

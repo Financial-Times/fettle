@@ -92,8 +92,9 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
 
   alias Fettle.TimeStamp
   alias Fettle.Spec
+  alias Fettle.ScoreBoard
 
-  @spec to_schema(config :: Fettle.Config.t, results :: [Api.check]) :: Report.t
+  @spec to_schema(config :: Fettle.Config.t, results :: [ScoreBoard.check]) :: Fettle.Schema.report
   def to_schema(config, results) when is_map(config) and is_list(results) do
     %__MODULE__.Report{
       schemaVersion: @schemaVersion,
@@ -105,13 +106,13 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   end
 
   @doc false
-  @spec results_to_schema([Api.check]) :: [CheckResult.t]
+  @spec results_to_schema([ScoreBoard.check]) :: [CheckResult.t]
   def results_to_schema(results) when is_list(results) do
     Enum.map(results, &result_to_schema/1)
   end
 
   @doc false
-  @spec result_to_schema(Api.check) :: CheckResult.t
+  @spec result_to_schema(ScoreBoard.check) :: CheckResult.t
   def result_to_schema({healthcheck = %Spec{}, %Fettle.Checker.Result{status: status, message: msg, timestamp: ts}}) do
     %CheckResult{
       id: healthcheck.id,

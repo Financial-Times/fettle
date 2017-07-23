@@ -18,8 +18,8 @@ defmodule RunnerSuperTest do
   defmodule TestChecker do
     @behaviour Fettle.Checker
 
-    def check(args) do
-      parent = args[:parent]
+    def check(state) do
+      parent = state[:parent]
       send(parent, :check_got_args)
       Fettle.Checker.Result.ok()
     end

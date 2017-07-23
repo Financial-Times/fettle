@@ -23,7 +23,7 @@ defmodule Fettle.ScoreBoard do
   @type state :: {Config.t, checks}
 
   @doc "Produces a health report in a desired schema format."
-  @spec report(schema :: atom) :: Schema.Report.t
+  @spec report(schema :: atom) :: Schema.report
   def report(schema \\ nil) do
     GenServer.call(via(), {:report, schema})
   end
@@ -97,7 +97,7 @@ defmodule Fettle.ScoreBoard do
   end
 
   @doc false
-  @spec handle_call({:report, atom}, pid, state) :: {:reply, Schema.Report.t, state}
+  @spec handle_call({:report, atom}, pid, state) :: {:reply, Schema.report, state}
   def handle_call({:report, schema}, _pid, state = {app, checks}) do
     report_mod = schema || app.schema || @default_schema
     report = report_mod.to_schema(app, Map.values(checks))

@@ -4,7 +4,7 @@ Runs health-check functions periodically, and aggregates health status reports.
 
 (AKA Elixir implementation of FT Health-Check standard).
 
-[![Inline docs](http://inch-ci.org/github/Financial-Times/fettle.svg)](http://inch-ci.org/github/Financial-Times/fettle) [![Build Status](https://travis-ci.org/Financial-Times/fettle.svg?branch=master)](https://travis-ci.org/Financial-Times/fettle)
+[![Hex pm](http://img.shields.io/hexpm/v/fettle.svg?style=flat)](https://hex.pm/packages/fettle) [![Inline docs](http://inch-ci.org/github/Financial-Times/fettle.svg)](http://inch-ci.org/github/Financial-Times/fettle) [![Build Status](https://travis-ci.org/Financial-Times/fettle.svg?branch=master)](https://travis-ci.org/Financial-Times/fettle)
 
 > **fettle**
 *noun* - "his best players were in fine fettle": shape, trim, fitness, physical fitness, health, state of health; condition, form, repair, state of repair, state, order, working order, way; informal: kilter; British informal: nick.
@@ -24,11 +24,21 @@ Ships with the [FT Health Check V1](FTHealthcheckstandard.pdf) schema format for
 
 Add a dependency in your `mix.exs` config:
 
+```elixir
+def deps do
+  [
+    {:fettle, "~> 0.1"}
+  ]
+end
+```
+
 For the bleeding edge:
 
 ```elixir
 def deps do
-  [{:fettle, github: "Financial-Times/fettle"}]
+  [
+    {:fettle, github: "Financial-Times/fettle"}
+  ]
 end
 ```
 

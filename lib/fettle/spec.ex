@@ -1,6 +1,6 @@
 defmodule Fettle.Spec do
   @moduledoc """
-  Describes health-check meta-data, created from configuration and used
+  Describes health check meta-data; created from configuration and used
   to generate reports.
 
   All the fields must have values, but some can be provided from the

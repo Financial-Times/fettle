@@ -1,7 +1,7 @@
 defmodule Fettle.ScoreBoard do
   @moduledoc """
   Keeps track of the results of health checks, as reported to it,
-  and makes them available in a the configured schema format.
+  and makes them available in the configured schema format.
 
   The scoreboard requires that healthchecks are first registered with the process
   before it receives results; this is normally taken care of by the start-up

@@ -39,7 +39,7 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
 
   @behaviour Fettle.Schema
 
-  @schemaVersion 1
+  @schema_version 1
 
   defmodule CheckResult do
     @moduledoc "A single FT Healthcheck V1 check result"
@@ -97,7 +97,7 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   @spec to_schema(config :: Fettle.Config.t, results :: [ScoreBoard.check]) :: Fettle.Schema.report
   def to_schema(config, results) when is_map(config) and is_list(results) do
     %__MODULE__.Report{
-      schemaVersion: @schemaVersion,
+      schemaVersion: @schema_version,
       systemCode: config.system_code,
       name: config.name || config.system_code,
       description: config.description || config.system_code,

@@ -28,7 +28,13 @@ defmodule Fettle.Application do
     DeferredConfig.populate(:fettle)
 
     env = Application.get_all_env(:fettle)
-    app_config = Keyword.drop(env, [:checks]) |> Enum.into(Map.new) |> Config.to_app_config()
+
+    app_config =
+      env
+      |> Keyword.drop([:checks])
+      |> Enum.into(Map.new)
+      |> Config.to_app_config()
+
     checks = env[:checks] || []
     checks = Enum.map(checks, fn check -> Config.check_from_config(check, app_config) end)
 

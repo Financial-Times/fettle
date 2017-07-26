@@ -11,7 +11,7 @@ Runs health-check functions periodically, and aggregates health status reports.
 
 This library implents an asynchronous periodic check mechanism, and defines a way of configuring checks, and getting reports in a particular format. It is intended for use with monitoring and dashboards.
 
-Ships with the [FT Health Check V1](FTHealthcheckstandard.pdf) schema format for report generation, but the schema is configurable.
+Ships with the [FT Health Check V1](https://github.com/Financial-Times/fettle/blob/master/FTHealthcheckstandard.pdf) schema format for report generation, but the schema is configurable.
 
 ## See also 
 

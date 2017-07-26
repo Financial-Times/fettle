@@ -55,9 +55,9 @@ defmodule MyCheck do
   def check(args) do
     case do_check(args) do  # assume do_check/1 does something useful!
       :ok -> 
-        {Fettle.Check.Result.ok(), args}
+        Fettle.Check.Result.ok()
       {:error, message} -> 
-        {Fettle.Check.Result.error(message), args}
+        Fettle.Check.Result.error(message)
     end
   end
 end

@@ -3,7 +3,9 @@ matrix:
   include:
     - elixir: 1.4.4
       otp_release: 19.2
-
+    - elixir: 1.6.1
+      otp_release: 20.2
+      
 after_script:
   - cd $TRAVIS_BUILD_DIR
   - mix deps.get --only docs

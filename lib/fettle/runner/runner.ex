@@ -57,7 +57,7 @@ defmodule Fettle.Runner do
   @type checker_init :: {checker :: module, init_args :: any}
 
   @doc "start the runner for the given check."
-  @spec start_link(config :: Config.t, spec :: Spec.t, checker_init, opts :: Keyword.t) :: GenServer.on_start
+  @spec start_link(config :: Config.t, spec :: Spec.t, checker_init :: checker_init, opts :: Keyword.t) :: GenServer.on_start
   def start_link(config = %Config{}, spec = %Spec{}, checker_init, opts) when is_list(opts) do
     Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [spec, checker_init, opts]}" end)
 
@@ -77,21 +77,15 @@ defmodule Fettle.Runner do
 
     initial_result = Checker.Result.ok("Not run yet")
 
-    schedule_check(initial_delay_ms)
+    if !opts[:no_schedule] do
+      schedule_check(initial_delay_ms)
+    end
 
     init_state = if(function_exported?(checker_mod, :init, 1), do: checker_mod.init(init_args), else: init_args)
 
     checker_fun = fn(state) -> checker_mod.check(state) end
 
     {:ok, %__MODULE__{id: spec.id, checker_fun: checker_fun, checker_state: init_state, period_ms: period_ms, timeout_ms: timeout_ms, result: initial_result, scoreboard: scoreboard}}
-  end
-
-  @doc "Receives result from healthcheck, stores and forwards to `Fettle.ScoreBoard`"
-  def handle_info({:result, result = %Checker.Result{}, checker_state}, state = %__MODULE__{}) do
-    Logger.debug(fn -> "Healthcheck #{state.id} result is #{String.upcase(Atom.to_string(result.status))}: #{result.message}" end)
-
-    :ok = (state.scoreboard).result(state.id, result)
-    {:noreply, %{state | result: result, checker_state: checker_state}}
   end
 
   @doc "Runs healthcheck, and schedules timeout"
@@ -107,21 +101,32 @@ defmodule Fettle.Runner do
     {:noreply, %{state | task: task}, state.timeout_ms}
   end
 
+  @doc "Receives result from healthcheck, stores and forwards to `Fettle.ScoreBoard`"
+  def handle_info({:result, result = %Checker.Result{}, checker_state}, state = %__MODULE__{}) do
+    Logger.debug(fn -> "Healthcheck #{state.id} result is #{String.upcase(Atom.to_string(result.status))}: #{result.message}" end)
+
+    report_result(state, result)
+
+    {:noreply, %{state | result: result, checker_state: checker_state}}
+  end
+
   @doc "Handles if a timeout occurs before we receive a result message"
   def handle_info(:timeout, state = %__MODULE__{task: {pid, _ref}}) do
-    # check has timed out
+    # check has timed out, report error; :DOWN handling will reschedule
     Logger.info(fn -> "Healthcheck #{state.id} timed out" end)
 
     Process.exit(pid, :kill)
 
     timeout_result = Checker.Result.error("Timeout")
 
-    {:noreply, %{state | task: nil, result: timeout_result}}
+    report_result(state, timeout_result)
+
+    {:noreply, %{state | result: timeout_result}}
   end
 
   @doc false
   def handle_info({:DOWN, _ref, :process, _pid, :normal}, state) do
-    # sub-process exited normally: reschedule
+    # sub-process exited normally: just reschedule
     schedule_check(state.period_ms)
 
     {:noreply, %{state | task: nil}}
@@ -129,8 +134,9 @@ defmodule Fettle.Runner do
 
   @doc false
   def handle_info({:DOWN, _ref, :process, _pid, :killed}, state) do
-    # sub-process was killed, hopefully by us: reschedule
+    # sub-process was killed, hopefully by us: just reschedule
     Logger.debug(fn -> "Healthcheck #{state.id} was killed" end)
+
     schedule_check(state.period_ms)
 
     {:noreply, %{state | task: nil}}
@@ -138,19 +144,29 @@ defmodule Fettle.Runner do
 
   @doc false
   def handle_info({:DOWN, _ref, :process, _pid, reason}, state) do
-    # sub-process died, reschedule check
+    # sub-process died, report error and reschedule check
     Logger.warn(fn -> "Checker process for #{state.id} died: #{inspect reason}" end)
+
+    down_result = Checker.Result.error("Check died: #{inspect reason}")
+
+    report_result(state, down_result)
 
     schedule_check(state.period_ms)
 
-    {:noreply, %{state | result: Checker.Result.error(inspect reason)}}
+    {:noreply, %{state | task: nil, result: down_result}}
+  end
+
+  defp report_result(%__MODULE__{id: id, scoreboard: scoreboard}, %Checker.Result{} = result) do
+    :ok = scoreboard.result(id, result)
   end
 
   @doc false
-  def run_check(fun, state, runner) do
+  defp run_check(fun, state, result_receiver) do
       case fun.(state) do
-        {result = %Checker.Result{}, new_state} -> send(runner, {:result, result, new_state})
-        result = %Checker.Result{} -> send(runner, {:result, result, state})
+        {result = %Checker.Result{}, new_state} ->
+          send(result_receiver, {:result, result, new_state})
+        result = %Checker.Result{} ->
+          send(result_receiver, {:result, result, state})
       end
   end
 

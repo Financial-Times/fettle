@@ -21,3 +21,6 @@ erl_crash.dump
 
 # Ignore generated docs
 /doc
+
+# VSCode language server
+.elixir_ls

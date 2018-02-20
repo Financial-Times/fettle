@@ -37,11 +37,35 @@ defmodule RunnerTest do
     assert mailbox() == [], "Expected empty mailbox"
   end
 
-  test "receive result: updates state and sends to scoreboard" do
+  test "init runner with no_schedule does not schedule first check (test facility)" do
+    spec = %{spec() | period_ms: 0}
 
-    {:ok, state} = Runner.init([config(), spec(), {HealthyCheck, []}, opts()])
+    {:ok, _state} = Runner.init([config(), spec, {HealthyCheck, [:init]}, no_schedule_opts()])
 
-    assert_receive :scheduled_check
+    refute_receive :scheduled_check
+
+    assert [] == mailbox()
+  end
+
+  test "scheduling message runs test" do
+
+    {:ok, state} = Runner.init([config(), spec(), {HealthyCheck, [:init]}, no_schedule_opts()])
+
+    {:noreply, Runner.handle_info(:scheduled_check, state)}
+
+    assert_receive {:result, result, check_state}
+
+    assert %{result | timestamp: nil} == %{Result.ok() | timestamp: nil}
+    assert [:init] == check_state
+
+    assert_receive {:DOWN, _ref, :process, _pid, :normal}
+
+    assert [] == mailbox()
+  end
+
+  test "receive result: updates state and reports to scoreboard" do
+
+    {:ok, state} = Runner.init([config(), spec(), {HealthyCheck, []}, no_schedule_opts()])
 
     result = Result.new(:warn, "Warning", 100)
 
@@ -55,10 +79,10 @@ defmodule RunnerTest do
     assert id == state.id
     assert sb_result == result
 
-    assert mailbox() == [], "Expected empty mailbox"
+    assert [] == mailbox()
   end
 
-  test "timeout kills check and reschedules" do
+  test "timeout kills check, reports error to scoreboard, and re-schedules via DOWN" do
     defmodule TimeoutCheck do
       def check(_) do
         Process.sleep(10_000)
@@ -66,46 +90,46 @@ defmodule RunnerTest do
       end
     end
 
-    spec = %{spec() | period_ms: 0}
+    spec = %{spec() | period_ms: 0} # arrange immediate schedule on check
 
-    {:ok, state} = Runner.init([config(), spec, {TimeoutCheck, []}, opts()])
-
-    assert_receive :scheduled_check
+    {:ok, state} = Runner.init([config(), spec, {TimeoutCheck, []}, no_schedule_opts()])
 
     {:noreply, state = %{task: {pid, ref}}, timeout} = Runner.handle_info(:scheduled_check, state)
-
     assert timeout == 5000
 
-    {:noreply, state_timeout} = Runner.handle_info(:timeout, state)
+    {:noreply, state} = Runner.handle_info(:timeout, state) # simulate timeout
 
-    assert %Result{status: :error, message: "Timeout"} = state_timeout.result
-    assert state_timeout.task == nil
+    expected_result = %Result{status: :error, message: "Timeout"}
+    assert expected_result == %{state.result | timestamp: nil}
+
+    assert_receive {:test_scoreboard, id, sb_result}
+
+    assert id == state.id
+    assert sb_result == state.result
+
+    refute_receive :scheduled_check
 
     assert_receive down_message = {:DOWN, ^ref, :process, ^pid, :killed}
 
     {:noreply, state} = Runner.handle_info(down_message, state)
-
     assert state.task == nil
 
     assert_receive :scheduled_check
 
-    assert mailbox() == [], "Expected empty mailbox"
+    assert [] == mailbox()
   end
 
   test "reschedules check when scheduled check exits normally" do
 
     spec = %{spec() | period_ms: 0}
 
-    {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, opts()])
+    {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
 
-    assert_receive :scheduled_check
+    task = {self(), make_ref()}
 
-    {:noreply, %{task: {pid, ref}}, timeout} = Runner.handle_info(:scheduled_check, state)
+    state = %{state | task: task}
 
-    assert timeout == 5000
-
-    assert_receive {:result, %Result{status: :ok}, [:checker_state]}
-    assert_receive down_message = {:DOWN, ^ref, :process, ^pid, :normal}
+    down_message = {:DOWN, elem(task, 1), :process, elem(task, 0), :normal}
 
     {:noreply, state} = Runner.handle_info(down_message, state)
 
@@ -113,7 +137,20 @@ defmodule RunnerTest do
 
     assert_receive :scheduled_check
 
-    assert mailbox() == [], "Expected empty mailbox"
+    assert [] == mailbox()
+  end
+
+  test "reschedules check when scheduled check killed" do
+    spec = %{spec() | period_ms: 0}
+
+    {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
+
+    down_message = {:DOWN, make_ref(), :process, self(), :killed}
+
+    Runner.handle_info(down_message, state)
+    assert_receive :scheduled_check
+
+    assert [] == mailbox()
   end
 
   test "reschedules check when scheduled check exits abnormally" do
@@ -125,25 +162,29 @@ defmodule RunnerTest do
 
     spec = %{spec() | period_ms: 0}
 
-    {:ok, state} = Runner.init([config(), spec, {BadExitCheck, []}, opts()])
+    {:ok, state} = Runner.init([config(), spec, {BadExitCheck, []}, no_schedule_opts()])
 
-    assert_receive :scheduled_check
-
-    {:noreply, %{task: {pid, ref}}, timeout} = Runner.handle_info(:scheduled_check, state)
-
-    assert timeout == 5000
+    {:noreply, %{task: {pid, ref}}, _timeout} = Runner.handle_info(:scheduled_check, state)
 
     refute_receive {:result, _result, _checker_state}
+
     assert_receive down_message = {:DOWN, ^ref, :process, ^pid, :sad!}
 
     {:noreply, state} = Runner.handle_info(down_message, state)
 
     assert state.task == nil
-    assert %Result{status: :error, message: ":sad!"} = state.result
 
-    assert_receive :scheduled_check
+    expected_result = %Result{status: :error, message: "Check died: :sad!"}
 
-    assert mailbox() == [], "Expected empty mailbox"
+    assert expected_result == %{state.result | timestamp: nil}
+
+    assert_receive {:test_scoreboard, _id, sb_result}
+
+    assert sb_result == state.result
+
+    assert_receive :scheduled_check, 100
+
+    assert [] == mailbox()
   end
 
   test "maintains initial args for stateless checker without init/1" do
@@ -266,6 +307,8 @@ defmodule RunnerTest do
   end
 
   defp opts, do: [scoreboard: TestScoreBoard]
+
+  defp no_schedule_opts, do: [{:no_schedule, true} | opts()]
 
   defp spec do
     %Spec{

@@ -61,7 +61,12 @@ defmodule Fettle.Runner do
   def start_link(config = %Config{}, spec = %Spec{}, checker_init, opts) when is_list(opts) do
     Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [spec, checker_init, opts]}" end)
 
-    GenServer.start_link(__MODULE__, [config, spec, checker_init, opts])
+    GenServer.start_link(__MODULE__, [config, spec, checker_init, opts], name: via(spec))
+  end
+
+  defp via(spec) do
+    # register/lookup proc by spec id via the Registry
+    {:via, Registry, {Fettle.Registry, spec.id}}
   end
 
   @doc false

@@ -20,8 +20,7 @@ defmodule Fettle.RunnerSupervisor do
   alias Fettle.Spec
 
   @doc false
-  @spec start_link(config :: Config.t, checks :: [Config.spec_and_mod]) :: Supervisor.on_start
-  def start_link(config = %Config{}, checks) when is_list(checks) do
+  def start_link([config = %Config{}, checks]) when is_list(checks) do
     Logger.debug(fn -> "#{__MODULE__} start_link #{inspect [config, checks]}" end)
     Supervisor.start_link(__MODULE__, [config, checks], name: via())
   end

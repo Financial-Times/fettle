@@ -5,7 +5,7 @@ defmodule RunnerSuperTest do
   alias Fettle.Spec
 
   setup do
-    Application.ensure_all_started(:fettle)
+    start_supervised(Fettle.Supervisor)
     :ok
   end
 

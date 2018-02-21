@@ -3,8 +3,8 @@ defmodule Fettle.Mixfile do
 
   def project do
     [app: :fettle,
-     version: "0.1.1",
-     elixir: "~> 1.4",
+     version: "0.2.0",
+     elixir: "~> 1.5",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -21,8 +21,7 @@ defmodule Fettle.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger],
-     mod: {Fettle.Application, []}]
+    [extra_applications: [:logger]]
   end
 
   # Specifies which paths to compile per environment.

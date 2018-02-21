@@ -18,7 +18,7 @@ defmodule ConfigTest do
         description: "system-code",
         schema: Fettle.Schema.FTHealthCheckV1,
         period_ms: 30000,
-        initial_delay_ms: 0,
+        initial_delay_ms: 500,
         timeout_ms: 5000
       }
     end
@@ -60,6 +60,20 @@ defmodule ConfigTest do
         business_impact: "biz impact"
       }
     end
+
+    test "integer properties can be passed as strings" do
+      app = %{
+        system_code: "system-code",
+        period_ms: "10",
+        initial_delay_ms: "20",
+        timeout_ms: "30"
+      }
+
+      config = Config.to_app_config(app)
+
+      assert %{period_ms: 10, initial_delay_ms: 20, timeout_ms: 30} = config
+    end
+
 
   end
 
@@ -196,6 +210,33 @@ defmodule ConfigTest do
       end
 
     end
+
+    test "illegal property values raise error" do
+      minimal_config = %Config{initial_delay_ms: 1, period_ms: 1, timeout_ms: 1}
+
+      spec = %{
+          name: "Name",
+          panic_guide_url: "urlx",
+          business_impact: "bix",
+          technical_summary: "tsx",
+          checker: Fettle.AlwaysHealthyCheck
+      }
+
+      # negative values
+      for field <- [:initial_delay_ms, :period_ms, :timeout_ms] do
+        assert_raise ArgumentError, ~r/#{field}/, fn ->
+          Map.put(spec, field, -1)
+          |> Config.check_from_config(minimal_config)
+        end
+      end
+
+      # out of range
+      assert_raise ArgumentError, ~r/severity/, fn ->
+        Map.put(spec, :severity, 9)
+        |> Config.check_from_config(minimal_config)
+      end
+    end
+
   end
 
   def config() do

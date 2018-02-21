@@ -4,7 +4,7 @@ defmodule FettleTest do
   import Fettle.TestMacros
 
   setup do
-    Application.ensure_all_started(:fettle)
+    start_supervised(Fettle.Supervisor)
     :ok
   end
 

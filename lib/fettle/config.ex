@@ -2,8 +2,9 @@ defmodule Fettle.Config do
   @moduledoc """
   Processes configuration for healthchecks into internal structures.
 
-  The `:fettle` OTP application expects to find configuration under its OTP name,
-  with at least the mandatory fields specified. e.g.
+  Configuration can be specified either by application configuration under the
+  `:fettle` key, or by supplying via a module, function or inline argument
+  to `Fettle.Supervisor.start_link/1`.
 
   ```
     config :fettle,
@@ -16,6 +17,7 @@ defmodule Fettle.Config do
       timeout_ms: 2_000,
       checks: [ ... ]
   ```
+  The minimum configuration requires the `system_code` key:
 
   | Key | Description | Required or Defaults |
   | ----- | ----------- | -------------------- |
@@ -36,15 +38,12 @@ defmodule Fettle.Config do
   3. `checks` is an array, but each element can be specified as either a map,
      or a `Keyword` list (or any other `Enumerable` that yields key-value pairs).
 
-  Fettle uses [DeferredConfig](https://hexdocs.pm/deferred_config) to resolve `{:system, "ENV_VAR"}` style
-  tuples using shell enviroment variables; this works for all config values; remember to convert to the
-  correct type, e.g. `period_ms: {:system, "FETTLE_PERIOD_MS", {String, :to_integer}}`,
   """
 
   alias Fettle.Spec
 
   @default_period_ms 30_000
-  @default_initial_delay_ms 0
+  @default_initial_delay_ms 500
   @default_timeout_ms 5_000
 
   defstruct [
@@ -93,6 +92,7 @@ defmodule Fettle.Config do
       period_ms: @default_period_ms,
       timeout_ms: @default_timeout_ms
     ])
+    |> cast_to_integer([:initial_delay_ms, :period_ms, :timeout_ms])
   end
 
   @doc """
@@ -105,10 +105,13 @@ defmodule Fettle.Config do
   | `name` | `String` | Name of check | required |
   | `id` | `String` | Short id of check | Defaults to `name` |
   | `description` | `String` | Longer description of check | Defaults to `name` |
-  | `panic_guide_url` | `String` | URL of documentation for check | Required, defaults to config |
-  | `business_impact` | `String` | Which business function is affected? | Required, defaults to config |
-  | `technical_summary` | `String` | Technical description for Ops | Required, defaults to config |
-  | `severity` | `1-3` | Severity level: 1 high, 3 low | Required, defaults to `1` |
+  | `panic_guide_url` | `String` | URL of documentation for check | Defaults to config |
+  | `business_impact` | `String` | Which business function is affected? | Defaults to config |
+  | `technical_summary` | `String` | Technical description for Ops | Defaults to config |
+  | `severity` | `1-3` | Severity level: 1 high, 3 low | Defaults to `1` |
+  | `initial_delay_ms` | `integer` | Number of milliseconds to wait before running first check | Defaults to config |
+  | `period_ms` | `integer` | Number of milliseconds to wait between runs of the check | Defaults to config |
+  | `timeout_ms` | `integer` | Number of milliseconds to wait before timing-out check | Defaults to config |
   | `checker` | `atom` | `Fettle.Checker` module | Required |
   | `args` | `any` | passed as argument for `Fettle.Checker` module | defaults to [] |
 
@@ -170,6 +173,10 @@ defmodule Fettle.Config do
         period_ms: config.period_ms,
         timeout_ms: config.timeout_ms
       )
+      |> cast_to_integer([:initial_delay_ms, :period_ms, :timeout_ms, :severity])
+      |> check_range!(:severity, 1..3)
+      |> check_non_negative!([:initial_delay_ms, :period_ms, :timeout_ms])
+
 
     module = check[:checker] || raise ArgumentError, "Missing checker module for check #{spec.id}."
     module = Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1})
@@ -217,6 +224,29 @@ defmodule Fettle.Config do
         end)
         acc
     end)
+  end
+
+  defp cast_to_integer(map, keys) do
+    Enum.reduce(keys, map, fn key, m -> Map.update!(m, key, &to_integer/1) end)
+  end
+
+  defp to_integer(i) when is_integer(i), do: i
+  defp to_integer("" <> i), do: String.to_integer(i)
+  defp to_integer(nil), do: nil
+
+  defp check_range!(map, key, range) do
+    Enum.member?(range, Map.get(map, key)) || raise ArgumentError, "#{key} should be in range #{inspect range}: got #{Map.get(map,key)}"
+    map
+  end
+
+  defp check_non_negative!(map, keys) when is_list(keys) do
+    Enum.each(keys, fn key -> check_non_negative!(map, key) end)
+    map
+  end
+
+  defp check_non_negative!(map, key) do
+    (Map.get(map, key) >= 0) || raise ArgumentError, "#{key} should be zero or positive value: got #{Map.get(map,key)}"
+    map
   end
 
 end

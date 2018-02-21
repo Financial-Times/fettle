@@ -57,8 +57,7 @@ defmodule Fettle.ScoreBoard do
   end
 
   @doc "Start the scoreboard with a list of the checks it will keep results for."
-  @spec start_link(config :: Config.t, checks :: [Config.spec_and_mod]) :: GenServer.on_start
-  def start_link(config = %Config{}, checks) when is_list(checks) do
+  def start_link([config = %Config{}, checks]) when is_list(checks) do
     GenServer.start_link(__MODULE__, [config, checks], name: via())
   end
 

@@ -18,16 +18,20 @@ defmodule RunnerTest do
     def check(_) do
       Result.ok()
     end
-
   end
 
   test "init runner schedules first check" do
-
     spec = spec()
 
     {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:init]}, opts()])
 
-    assert %Runner{id: "test-1", result: %Result{status: :ok}, checker_state: [:init], checker_fun: fun} = state
+    assert %Runner{
+             id: "test-1",
+             result: %Result{status: :ok},
+             checker_state: [:init],
+             checker_fun: fun
+           } = state
+
     assert is_function(fun, 1)
     assert state.period_ms == spec.period_ms
     assert state.timeout_ms == spec.timeout_ms
@@ -48,7 +52,6 @@ defmodule RunnerTest do
   end
 
   test "scheduling message runs test" do
-
     {:ok, state} = Runner.init([config(), spec(), {HealthyCheck, [:init]}, no_schedule_opts()])
 
     {:noreply, Runner.handle_info(:scheduled_check, state)}
@@ -64,7 +67,6 @@ defmodule RunnerTest do
   end
 
   test "receive result: updates state and reports to scoreboard" do
-
     {:ok, state} = Runner.init([config(), spec(), {HealthyCheck, []}, no_schedule_opts()])
 
     result = Result.new(:warn, "Warning", 100)
@@ -90,14 +92,16 @@ defmodule RunnerTest do
       end
     end
 
-    spec = %{spec() | period_ms: 0} # arrange immediate schedule on check
+    # arrange immediate schedule on check
+    spec = %{spec() | period_ms: 0}
 
     {:ok, state} = Runner.init([config(), spec, {TimeoutCheck, []}, no_schedule_opts()])
 
     {:noreply, state = %{task: {pid, ref}}, timeout} = Runner.handle_info(:scheduled_check, state)
     assert timeout == 5000
 
-    {:noreply, state} = Runner.handle_info(:timeout, state) # simulate timeout
+    # simulate timeout
+    {:noreply, state} = Runner.handle_info(:timeout, state)
 
     expected_result = %Result{status: :error, message: "Timeout"}
     assert expected_result == %{state.result | timestamp: nil}
@@ -120,10 +124,10 @@ defmodule RunnerTest do
   end
 
   test "reschedules check when scheduled check exits normally" do
-
     spec = %{spec() | period_ms: 0}
 
-    {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
+    {:ok, state} =
+      Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
 
     task = {self(), make_ref()}
 
@@ -143,7 +147,8 @@ defmodule RunnerTest do
   test "reschedules check when scheduled check killed" do
     spec = %{spec() | period_ms: 0}
 
-    {:ok, state} = Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
+    {:ok, state} =
+      Runner.init([config(), spec, {HealthyCheck, [:checker_state]}, no_schedule_opts()])
 
     down_message = {:DOWN, make_ref(), :process, self(), :killed}
 
@@ -214,6 +219,7 @@ defmodule RunnerTest do
       def init(args) do
         Enum.into(args, %{b: 2})
       end
+
       def check(%{a: 1, b: 2}) do
         Result.ok()
       end
@@ -239,6 +245,7 @@ defmodule RunnerTest do
       def init(%{x: x}) do
         x + 1
       end
+
       def check(x) do
         {Result.ok(), x + 1}
       end
@@ -301,8 +308,9 @@ defmodule RunnerTest do
     receive do
       message ->
         mailbox([message | mailbox])
-    after 0 ->
-      mailbox
+    after
+      0 ->
+        mailbox
     end
   end
 
@@ -327,5 +335,4 @@ defmodule RunnerTest do
       timeout_ms: 1000
     }
   end
-
 end

@@ -6,8 +6,8 @@ defmodule Fettle.Checker.Result do
   alias Fettle.TimeStamp
 
   @type status :: :ok | :warn | :error
-  @type message :: String.t
-  @type t :: %__MODULE__{status: status, message: message, timestamp: TimeStamp.t}
+  @type message :: String.t()
+  @type t :: %__MODULE__{status: status, message: message, timestamp: TimeStamp.t()}
 
   @doc "create a new result with the current timestamp"
   def new(status, message), do: new(status, message, TimeStamp.instant())
@@ -29,5 +29,4 @@ defmodule Fettle.Checker.Result do
 
   @doc "ok result shortcut."
   def ok(message \\ "OK"), do: new(:ok, message)
-
 end

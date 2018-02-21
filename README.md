@@ -27,7 +27,7 @@ Add a dependency in your `mix.exs` config:
 ```elixir
 def deps do
   [
-    {:fettle, "~> 0.1"}
+    {:fettle, "~> 1.0"}
   ]
 end
 ```
@@ -42,8 +42,34 @@ def deps do
 end
 ```
 
-Fettle is an OTP application, and in Elixir 1.4+, will be started with other applications through Elixir's auto-detection of OTP apps in dependencies.
+### Starting
 
+Add `Fettle.Supervisor` to your supervision tree<sup>1</sup>, e.g. in your `Application.start/2`:
+
+```elixir
+def start(_type, _args) do
+    children = [
+        {Fettle.Supervisor, []},
+        ...
+    ]
+
+    Supervisor.start_link(children, strategy: :one_for_one)
+end
+```
+
+or otherwise call `Fettle.Supervisor.start_link/1`.
+
+By default Fettle will load configuration from the `:fettle` application config key, the minimum 
+required configuration for start-up is:
+
+```elixir
+config :fettle,
+    system_code: "my_app"
+```
+
+where `system_code` is a code used in reports; see below for other options.
+
+* [1] - this changed in v1.0.0 - was auto-starting OTP application.
 ### Defining checks
 
 The [`fettle_checks`](https://github.com/Financial-Times/fettle_checks) module provides pre-canned checks, but to write your own, implement a module with the `Fettle.Checker` `@behaviour` that runs a check, and returns a `Fettle.Check.Result` struct:
@@ -81,7 +107,7 @@ config :fettle,
     ]
 ```
 
-On application start-up, Fettle will start running your check, by default every 30 seconds, and you can retrieve the results using `Fettle.report/1`.
+On start-up, Fettle will start running your check, by default every 30 seconds, and you can retrieve the results using `Fettle.report/1`.
 
 [`fettle_plug`](https://github.com/Financial-Times/fettle_plug) can then be used to expose the results over an HTTP end-point.
 

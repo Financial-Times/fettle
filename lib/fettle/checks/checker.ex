@@ -130,7 +130,7 @@ defmodule Fettle.Checker do
   alias Fettle.Checker.Result
 
   @callback init(args :: any) :: any
-  @callback check(state :: any) :: {Result.t, state :: any} | Result.t
+  @callback check(state :: any) :: {Result.t(), state :: any} | Result.t()
 
   @optional_callbacks init: 1
 
@@ -145,5 +145,4 @@ defmodule Fettle.Checker do
       @defoverridable init: 1
     end
   end
-
 end

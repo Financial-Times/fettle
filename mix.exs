@@ -2,18 +2,17 @@ defmodule Fettle.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :fettle,
-     version: "0.1.1",
-     elixir: "~> 1.4",
-     elixirc_paths: elixirc_paths(Mix.env),
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     aliases: [test: "test --no-start"],
-     source_url: "https://github.com/Financial-Times/fettle",
-     description: description(),
-     package: package(),
-     docs: docs(),
-     deps: deps()]
+    [
+      app: :fettle,
+      version: "1.0.0",
+      elixir: "~> 1.5",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      source_url: "https://github.com/Financial-Times/fettle",
+      description: description(),
+      package: package(),
+      docs: docs(),
+      deps: deps()
+    ]
   end
 
   # Configuration for the OTP application
@@ -21,19 +20,19 @@ defmodule Fettle.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger],
-     mod: {Fettle.Application, []}]
+    [extra_applications: [:logger]]
   end
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_),     do: ["lib"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def package do
     [
       maintainers: ["Ellis Pritchard"],
       licenses: ["MIT"],
-      links: %{"Github" => "https://github.com/Financial-Times/fettle"} ]
+      links: %{"Github" => "https://github.com/Financial-Times/fettle"}
+    ]
   end
 
   defp description do
@@ -43,8 +42,7 @@ defmodule Fettle.Mixfile do
   end
 
   def docs do
-    [main: "readme",
-     extras: ["README.md"]]
+    [main: "readme", extras: ["README.md"]]
   end
 
   defp deps do

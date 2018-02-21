@@ -6,7 +6,6 @@ defmodule Fettle.AlwaysHealthyCheck do
   def check(_) do
     Result.ok()
   end
-
 end
 
 defmodule Fettle.NeverHealthyCheck do
@@ -17,5 +16,4 @@ defmodule Fettle.NeverHealthyCheck do
   def check(_) do
     Result.error("Check failed")
   end
-
 end

@@ -1,7 +1,5 @@
 use Mix.Config
 
-config :fettle,
-  system_code: :fettle
+config :fettle, system_code: :fettle
 
-config :logger,
-  level: :error
+config :logger, level: :error

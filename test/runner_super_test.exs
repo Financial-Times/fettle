@@ -1,11 +1,10 @@
 defmodule RunnerSuperTest do
-
   use ExUnit.Case
 
   alias Fettle.Spec
 
   setup do
-    Application.ensure_all_started(:fettle)
+    start_supervised(Fettle.Supervisor)
     :ok
   end
 
@@ -40,5 +39,4 @@ defmodule RunnerSuperTest do
 
     assert_receive :check_got_args
   end
-
 end

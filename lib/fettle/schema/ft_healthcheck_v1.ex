@@ -57,17 +57,16 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
     ]
 
     @type t :: %__MODULE__{
-      id: String.t,
-      name: String.t,
-      ok: boolean,
-      lastUpdated: String.t,
-      checkOutput: String.t,
-      severity: integer,
-      businessImpact: String.t,
-      technicalSummary: String.t,
-      panicGuide: String.t
-    }
-
+            id: String.t(),
+            name: String.t(),
+            ok: boolean,
+            lastUpdated: String.t(),
+            checkOutput: String.t(),
+            severity: integer,
+            businessImpact: String.t(),
+            technicalSummary: String.t(),
+            panicGuide: String.t()
+          }
   end
 
   defmodule Report do
@@ -82,19 +81,20 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
     ]
 
     @type t :: %__MODULE__{
-      schemaVersion: integer,
-      systemCode: String.t,
-      name: String.t,
-      description: String.t,
-      checks: [CheckResult.t]
-    }
+            schemaVersion: integer,
+            systemCode: String.t(),
+            name: String.t(),
+            description: String.t(),
+            checks: [CheckResult.t()]
+          }
   end
 
   alias Fettle.TimeStamp
   alias Fettle.Spec
   alias Fettle.ScoreBoard
 
-  @spec to_schema(config :: Fettle.Config.t, results :: [ScoreBoard.check]) :: Fettle.Schema.report
+  @spec to_schema(config :: Fettle.Config.t(), results :: [ScoreBoard.check()]) ::
+          Fettle.Schema.report()
   def to_schema(config, results) when is_map(config) and is_list(results) do
     %__MODULE__.Report{
       schemaVersion: @schema_version,
@@ -106,14 +106,17 @@ defmodule Fettle.Schema.FTHealthCheckV1 do
   end
 
   @doc false
-  @spec results_to_schema([ScoreBoard.check]) :: [CheckResult.t]
+  @spec results_to_schema([ScoreBoard.check()]) :: [CheckResult.t()]
   def results_to_schema(results) when is_list(results) do
     Enum.map(results, &result_to_schema/1)
   end
 
   @doc false
-  @spec result_to_schema(ScoreBoard.check) :: CheckResult.t
-  def result_to_schema({healthcheck = %Spec{}, %Fettle.Checker.Result{status: status, message: msg, timestamp: ts}}) do
+  @spec result_to_schema(ScoreBoard.check()) :: CheckResult.t()
+  def result_to_schema(
+        {healthcheck = %Spec{},
+         %Fettle.Checker.Result{status: status, message: msg, timestamp: ts}}
+      ) do
     %CheckResult{
       id: healthcheck.id,
       name: healthcheck.name,

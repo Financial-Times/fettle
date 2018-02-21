@@ -9,8 +9,7 @@ defmodule FettleTest do
   end
 
   describe "reports" do
-
-    testschema TestSchema
+    testschema(TestSchema)
 
     test "reports with custom schema" do
       assert %FettleTest.TestSchema{} = Fettle.report(TestSchema)
@@ -23,11 +22,9 @@ defmodule FettleTest do
     test "reports with default schema" do
       assert Fettle.report()
     end
-
   end
 
   describe "add checks" do
-
     defmodule TestCheck do
       @behaviour Fettle.Checker
 
@@ -49,5 +46,4 @@ defmodule FettleTest do
       assert Enum.find(report.checks, fn check -> check.name == "test-check" end)
     end
   end
-
 end

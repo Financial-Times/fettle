@@ -8,7 +8,7 @@ defmodule ScoreBoardTest do
 
   import Fettle.TestMacros
 
-  testschema TestSchema
+  testschema(TestSchema)
 
   test "init with no checks" do
     {:ok, state} = ScoreBoard.init([config(), []])
@@ -21,6 +21,7 @@ defmodule ScoreBoardTest do
       id: "id",
       name: "foo"
     }
+
     id = spec.id
 
     check = {
@@ -28,10 +29,11 @@ defmodule ScoreBoardTest do
       MyModule,
       []
     }
+
     {:ok, {_app, checks}} = ScoreBoard.init([config(), [check]])
 
     assert checks[id]
-    {^spec,  %Fettle.Checker.Result{}} = checks[id]
+    {^spec, %Fettle.Checker.Result{}} = checks[id]
   end
 
   test "new check adds to state" do
@@ -58,17 +60,28 @@ defmodule ScoreBoardTest do
     check2 = make_check("check-2")
     {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
 
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", Result.new(:ok, "OK", 1)}, state)
+    {:noreply, state} =
+      ScoreBoard.handle_cast({:result, "check-1", Result.new(:ok, "OK", 1)}, state)
+
     assert {:reply, true, _} = ScoreBoard.handle_call(:ok?, self(), state)
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", Result.new(:warn, "Warn", 2)}, state)
+
+    {:noreply, state} =
+      ScoreBoard.handle_cast({:result, "check-2", Result.new(:warn, "Warn", 2)}, state)
+
     assert {:reply, false, _} = ScoreBoard.handle_call(:ok?, self(), state)
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", Result.new(:error, "Error", 3)}, state)
+
+    {:noreply, state} =
+      ScoreBoard.handle_cast({:result, "check-1", Result.new(:error, "Error", 3)}, state)
+
     assert {:reply, false, _} = ScoreBoard.handle_call(:ok?, self(), state)
 
     {_app, checks} = state
 
-    assert {%Spec{id: "check-1"}, %Result{status: :error, message: "Error", timestamp: 3}} == checks["check-1"]
-    assert {%Spec{id: "check-2"}, %Result{status: :warn, message: "Warn", timestamp: 2}} == checks["check-2"]
+    assert {%Spec{id: "check-1"}, %Result{status: :error, message: "Error", timestamp: 3}} ==
+             checks["check-1"]
+
+    assert {%Spec{id: "check-2"}, %Result{status: :warn, message: "Warn", timestamp: 2}} ==
+             checks["check-2"]
   end
 
   test "generates report in configured schema" do
@@ -76,23 +89,51 @@ defmodule ScoreBoardTest do
     check2 = make_check("check-2")
     {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
 
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}}, state)
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", %Result{status: :error, message: "Error", timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)}}, state)
+    {:noreply, state} =
+      ScoreBoard.handle_cast(
+        {:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}},
+        state
+      )
+
+    {:noreply, state} =
+      ScoreBoard.handle_cast(
+        {:result, "check-2",
+         %Result{
+           status: :error,
+           message: "Error",
+           timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)
+         }},
+        state
+      )
 
     {:reply, report, ^state} = ScoreBoard.handle_call({:report, nil}, self(), state)
 
     assert %TestSchema{systemCode: "test-app", count: 2} = report
   end
 
-  testschema TestSchema2
+  testschema(TestSchema2)
 
   test "generates report in desired schema" do
     check1 = make_check("check-1")
     check2 = make_check("check-2")
     {:ok, state} = ScoreBoard.init([config(), [check1, check2]])
 
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}}, state)
-    {:noreply, state} = ScoreBoard.handle_cast({:result, "check-2", %Result{status: :error, message: "Error", timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)}}, state)
+    {:noreply, state} =
+      ScoreBoard.handle_cast(
+        {:result, "check-1", %Result{status: :ok, message: "OK", timestamp: TimeStamp.instant()}},
+        state
+      )
+
+    {:noreply, state} =
+      ScoreBoard.handle_cast(
+        {:result, "check-2",
+         %Result{
+           status: :error,
+           message: "Error",
+           timestamp: TimeStamp.incr(TimeStamp.instant(), 1000)
+         }},
+        state
+      )
 
     {:reply, report, ^state} = ScoreBoard.handle_call({:report, TestSchema2}, self(), state)
 
@@ -115,5 +156,4 @@ defmodule ScoreBoardTest do
       schema: ScoreBoardTest.TestSchema
     }
   end
-
 end

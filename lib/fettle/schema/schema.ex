@@ -1,7 +1,7 @@
 defmodule Fettle.Schema do
   @moduledoc "Behaviour for report generators."
 
-  @type check :: {Fettle.Spec.t, Fettle.Checker.Result.t}
+  @type check :: {Fettle.Spec.t(), Fettle.Checker.Result.t()}
   @type report :: map | list
 
   @doc """
@@ -9,7 +9,7 @@ defmodule Fettle.Schema do
 
   Typically the report will ultimately be serialized to JSON.
   """
-  @callback to_schema(config :: Fettle.Config.t, checks :: [check]) :: report
+  @callback to_schema(config :: Fettle.Config.t(), checks :: [check]) :: report
 
   def complies(nil), do: {:error, nil}
 

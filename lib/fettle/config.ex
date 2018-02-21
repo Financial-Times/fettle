@@ -61,37 +61,43 @@ defmodule Fettle.Config do
 
   @typedoc "Top-level configuration for global settings and check defaults (derived from app config)"
   @type t :: %__MODULE__{
-    system_code: atom | String.t,
-    name: atom | String.t,
-    description: atom | String.t,
-    schema: atom, # module implementing Fettle.Schema
-    initial_delay_ms: integer, # initial delay before starting any checks
-    period_ms: integer, # period between checks
-    timeout_ms: integer, # check timeout
-    panic_guide_url: String.t, # default or base URL for relative url on checks
-    business_impact: String.t, # default for checks
-    technical_summary: String.t # default for checks
-  }
+          system_code: atom | String.t(),
+          name: atom | String.t(),
+          description: atom | String.t(),
+          # module implementing Fettle.Schema
+          schema: atom,
+          # initial delay before starting any checks
+          initial_delay_ms: integer,
+          # period between checks
+          period_ms: integer,
+          # check timeout
+          timeout_ms: integer,
+          # default or base URL for relative url on checks
+          panic_guide_url: String.t(),
+          # default for checks
+          business_impact: String.t(),
+          # default for checks
+          technical_summary: String.t()
+        }
 
   @typedoc "Tuple which specifies a check (derived from app config)"
-  @type spec_and_mod :: {Spec.t, module, init_args :: any}
+  @type spec_and_mod :: {Spec.t(), module, init_args :: any}
 
   @doc "Parses configuration into `%Fettle.Config{}`"
-  @spec to_app_config(map | list) :: __MODULE__.t
+  @spec to_app_config(map | list) :: __MODULE__.t()
   def to_app_config(map_or_kws) do
-
     config = struct(%__MODULE__{}, map_or_kws)
 
     config
     |> ensure_keys!([:system_code])
-    |> default_keys([
+    |> default_keys(
       name: config.system_code,
       description: config.system_code,
       schema: Fettle.Schema.FTHealthCheckV1,
       initial_delay_ms: @default_initial_delay_ms,
       period_ms: @default_period_ms,
       timeout_ms: @default_timeout_ms
-    ])
+    )
     |> cast_to_integer([:initial_delay_ms, :period_ms, :timeout_ms])
   end
 
@@ -143,21 +149,20 @@ defmodule Fettle.Config do
     ]
   ```
   """
-  @spec check_from_config(check :: map | list, config :: __MODULE__.t) :: spec_and_mod
+  @spec check_from_config(check :: map | list, config :: __MODULE__.t()) :: spec_and_mod
   def check_from_config(check, config)
 
   def check_from_config(check, config = %__MODULE__{}) when is_map(check) or is_list(check) do
-
     spec = struct(%Spec{}, check)
 
     spec =
       spec
       |> default_keys(
-          severity: 1,
-          business_impact: config.business_impact,
-          technical_summary: config.technical_summary,
-          panic_guide_url: config.panic_guide_url
-        )
+        severity: 1,
+        business_impact: config.business_impact,
+        technical_summary: config.technical_summary,
+        panic_guide_url: config.panic_guide_url
+      )
       |> interpolate_panic_guide_url(config)
       |> ensure_keys!([
         :name,
@@ -165,7 +170,7 @@ defmodule Fettle.Config do
         :panic_guide_url,
         :business_impact,
         :technical_summary
-        ])
+      ])
       |> default_keys(
         id: spec.name,
         description: spec.name,
@@ -177,8 +182,9 @@ defmodule Fettle.Config do
       |> check_range!(:severity, 1..3)
       |> check_non_negative!([:initial_delay_ms, :period_ms, :timeout_ms])
 
+    module =
+      check[:checker] || raise ArgumentError, "Missing checker module for check #{spec.id}."
 
-    module = check[:checker] || raise ArgumentError, "Missing checker module for check #{spec.id}."
     module = Fettle.Util.check_module_complies!(module, Fettle.Checker, {:check, 1})
 
     init_args = check[:args] || []
@@ -189,40 +195,49 @@ defmodule Fettle.Config do
   @doc "append path parts to top-level config `panic_guide_url` if relative path is given in checker."
   def interpolate_panic_guide_url(spec = %Spec{}, %__MODULE__{panic_guide_url: config_url}) do
     {_val, spec} =
-      Map.get_and_update(spec, :panic_guide_url, fn
-        val -> {val, interpolate_panic_guide_url(val, config_url)} end
-      )
+      Map.get_and_update(spec, :panic_guide_url, fn val ->
+        {val, interpolate_panic_guide_url(val, config_url)}
+      end)
+
     spec
   end
+
   def interpolate_panic_guide_url(nil, config_url), do: config_url
-  def interpolate_panic_guide_url("#" <> check_url, config_url) when is_binary(config_url), do: config_url <> "#" <> check_url
-  def interpolate_panic_guide_url("/" <> check_url, config_url) when is_binary(config_url), do: config_url <> "/" <> check_url
+
+  def interpolate_panic_guide_url("#" <> check_url, config_url) when is_binary(config_url),
+    do: config_url <> "#" <> check_url
+
+  def interpolate_panic_guide_url("/" <> check_url, config_url) when is_binary(config_url),
+    do: config_url <> "/" <> check_url
+
   def interpolate_panic_guide_url(check_url, _config_url) when is_binary(check_url), do: check_url
 
   @doc "ensure required keys are not missing, null, or empty strings"
   @spec ensure_keys!(config :: map, required_keys :: list) :: map | no_return
   def ensure_keys!(config, required_keys) when is_map(config) and is_list(required_keys) do
     Enum.each(required_keys, fn key ->
-        case config do
-          %{^key => val} when is_nil(val) -> raise ArgumentError, "config #{key} required"
-          %{^key => ""} -> raise ArgumentError, "non-empty value for config #{key} required"
-          %{^key => _val} -> :ok
-        end
+      case config do
+        %{^key => val} when is_nil(val) -> raise ArgumentError, "config #{key} required"
+        %{^key => ""} -> raise ArgumentError, "non-empty value for config #{key} required"
+        %{^key => _val} -> :ok
+      end
     end)
+
     config
   end
 
   @doc "default missing, nil or empty keys to matching values in keyword list"
-  @spec default_keys(config :: map, key_defaults :: Keyword.t) :: map
+  @spec default_keys(config :: map, key_defaults :: Keyword.t()) :: map
   def default_keys(config, key_defaults) when is_map(config) and is_list(key_defaults) do
-    Enum.reduce(key_defaults, config, fn
-      ({key, default}, acc) ->
-        {_, acc} = Map.get_and_update(acc, key, fn
+    Enum.reduce(key_defaults, config, fn {key, default}, acc ->
+      {_, acc} =
+        Map.get_and_update(acc, key, fn
           nil -> {nil, default}
           "" -> {"", default}
           existing -> {existing, existing}
         end)
-        acc
+
+      acc
     end)
   end
 
@@ -235,7 +250,9 @@ defmodule Fettle.Config do
   defp to_integer(nil), do: nil
 
   defp check_range!(map, key, range) do
-    Enum.member?(range, Map.get(map, key)) || raise ArgumentError, "#{key} should be in range #{inspect range}: got #{Map.get(map,key)}"
+    Enum.member?(range, Map.get(map, key)) ||
+      raise ArgumentError, "#{key} should be in range #{inspect(range)}: got #{Map.get(map, key)}"
+
     map
   end
 
@@ -245,8 +262,9 @@ defmodule Fettle.Config do
   end
 
   defp check_non_negative!(map, key) do
-    (Map.get(map, key) >= 0) || raise ArgumentError, "#{key} should be zero or positive value: got #{Map.get(map,key)}"
+    Map.get(map, key) >= 0 ||
+      raise ArgumentError, "#{key} should be zero or positive value: got #{Map.get(map, key)}"
+
     map
   end
-
 end

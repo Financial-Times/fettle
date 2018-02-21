@@ -37,16 +37,15 @@ defmodule Fettle.Spec do
   @type severity :: 1 | 2 | 3
 
   @type t :: %__MODULE__{
-    id: String.t,
-    name: String.t,
-    description: String.t,
-    severity: severity,
-    panic_guide_url: String.t,
-    business_impact: String.t,
-    technical_summary: String.t,
-    initial_delay_ms: non_neg_integer,
-    period_ms: non_neg_integer,
-    timeout_ms: non_neg_integer
-  }
-
+          id: String.t(),
+          name: String.t(),
+          description: String.t(),
+          severity: severity,
+          panic_guide_url: String.t(),
+          business_impact: String.t(),
+          technical_summary: String.t(),
+          initial_delay_ms: non_neg_integer,
+          period_ms: non_neg_integer,
+          timeout_ms: non_neg_integer
+        }
 end

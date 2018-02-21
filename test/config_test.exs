@@ -4,7 +4,6 @@ defmodule ConfigTest do
   alias Fettle.Config
 
   describe "top-level config" do
-
     test "defaults unspecified properties" do
       app = %{
         system_code: "system-code"
@@ -13,14 +12,14 @@ defmodule ConfigTest do
       config = Config.to_app_config(app)
 
       assert config == %Config{
-        system_code: "system-code",
-        name: "system-code",
-        description: "system-code",
-        schema: Fettle.Schema.FTHealthCheckV1,
-        period_ms: 30000,
-        initial_delay_ms: 500,
-        timeout_ms: 5000
-      }
+               system_code: "system-code",
+               name: "system-code",
+               description: "system-code",
+               schema: Fettle.Schema.FTHealthCheckV1,
+               period_ms: 30000,
+               initial_delay_ms: 500,
+               timeout_ms: 5000
+             }
     end
 
     test "missing required properties raises error" do
@@ -48,17 +47,17 @@ defmodule ConfigTest do
       config = Config.to_app_config(app)
 
       assert config == %Config{
-        system_code: "system-code",
-        name: "a name",
-        description: "a description",
-        schema: Fettle.Schema.V2,
-        period_ms: 60000,
-        initial_delay_ms: 1000,
-        timeout_ms: 10000,
-        panic_guide_url: "http://ft.com",
-        technical_summary: "tech summary",
-        business_impact: "biz impact"
-      }
+               system_code: "system-code",
+               name: "a name",
+               description: "a description",
+               schema: Fettle.Schema.V2,
+               period_ms: 60000,
+               initial_delay_ms: 1000,
+               timeout_ms: 10000,
+               panic_guide_url: "http://ft.com",
+               technical_summary: "tech summary",
+               business_impact: "biz impact"
+             }
     end
 
     test "integer properties can be passed as strings" do
@@ -73,12 +72,9 @@ defmodule ConfigTest do
 
       assert %{period_ms: 10, initial_delay_ms: 20, timeout_ms: 30} = config
     end
-
-
   end
 
   describe "check configuration" do
-
     test "specified properties override defaults" do
       config = %Config{
         panic_guide_url: "urlx",
@@ -90,23 +86,6 @@ defmodule ConfigTest do
       }
 
       check = %{
-          id: "test-1-id",
-          name: "test-1",
-          description: "Test 1",
-          panic_guide_url: "url1",
-          business_impact: "bi1",
-          technical_summary: "ts1",
-          severity: 2,
-          period_ms: 11_000,
-          initial_delay_ms: 8_000,
-          timeout_ms: 20_000,
-          checker: Fettle.AlwaysHealthyCheck,
-          args: [opt: 1]
-      }
-
-      {spec, module, args} = Config.check_from_config(check, config)
-
-      assert spec == %Fettle.Spec{
         id: "test-1-id",
         name: "test-1",
         description: "Test 1",
@@ -116,12 +95,28 @@ defmodule ConfigTest do
         severity: 2,
         period_ms: 11_000,
         initial_delay_ms: 8_000,
-        timeout_ms: 20_000
+        timeout_ms: 20_000,
+        checker: Fettle.AlwaysHealthyCheck,
+        args: [opt: 1]
       }
+
+      {spec, module, args} = Config.check_from_config(check, config)
+
+      assert spec == %Fettle.Spec{
+               id: "test-1-id",
+               name: "test-1",
+               description: "Test 1",
+               panic_guide_url: "url1",
+               business_impact: "bi1",
+               technical_summary: "ts1",
+               severity: 2,
+               period_ms: 11_000,
+               initial_delay_ms: 8_000,
+               timeout_ms: 20_000
+             }
 
       assert module == Fettle.AlwaysHealthyCheck
       assert args == [opt: 1]
-
     end
 
     test "uses defaults from top-level config" do
@@ -145,17 +140,17 @@ defmodule ConfigTest do
       {spec, module, args} = Config.check_from_config(check, config)
 
       assert spec == %Fettle.Spec{
-        id: "test-1",
-        name: "test-1",
-        description: "test-1",
-        panic_guide_url: "urlx",
-        business_impact: "bix",
-        technical_summary: "tsx",
-        severity: 1,
-        initial_delay_ms: 1000,
-        timeout_ms: 2000,
-        period_ms: 3000
-      }
+               id: "test-1",
+               name: "test-1",
+               description: "test-1",
+               panic_guide_url: "urlx",
+               business_impact: "bix",
+               technical_summary: "tsx",
+               severity: 1,
+               initial_delay_ms: 1000,
+               timeout_ms: 2000,
+               period_ms: 3000
+             }
 
       assert module == Fettle.AlwaysHealthyCheck
       assert args == [a: 1]
@@ -178,11 +173,11 @@ defmodule ConfigTest do
       minimal_config = %Config{initial_delay_ms: 1, period_ms: 1, timeout_ms: 1}
 
       spec = %{
-          name: "Name",
-          panic_guide_url: "urlx",
-          business_impact: "bix",
-          technical_summary: "tsx",
-          checker: Fettle.AlwaysHealthyCheck
+        name: "Name",
+        panic_guide_url: "urlx",
+        business_impact: "bix",
+        technical_summary: "tsx",
+        checker: Fettle.AlwaysHealthyCheck
       }
 
       # missing required field
@@ -196,30 +191,29 @@ defmodule ConfigTest do
       # required field is nil
       for field <- [:name, :panic_guide_url, :business_impact, :technical_summary, :checker] do
         assert_raise ArgumentError, ~r/#{field}/, fn ->
-            Map.put(spec, field, nil)
-            |> Config.check_from_config(minimal_config)
+          Map.put(spec, field, nil)
+          |> Config.check_from_config(minimal_config)
         end
       end
 
       # required field is empty string
       for field <- [:name, :panic_guide_url, :business_impact, :technical_summary] do
         assert_raise ArgumentError, ~r/#{field}/, fn ->
-            Map.put(spec, field, "")
-            |> Config.check_from_config(minimal_config)
+          Map.put(spec, field, "")
+          |> Config.check_from_config(minimal_config)
         end
       end
-
     end
 
     test "illegal property values raise error" do
       minimal_config = %Config{initial_delay_ms: 1, period_ms: 1, timeout_ms: 1}
 
       spec = %{
-          name: "Name",
-          panic_guide_url: "urlx",
-          business_impact: "bix",
-          technical_summary: "tsx",
-          checker: Fettle.AlwaysHealthyCheck
+        name: "Name",
+        panic_guide_url: "urlx",
+        business_impact: "bix",
+        technical_summary: "tsx",
+        checker: Fettle.AlwaysHealthyCheck
       }
 
       # negative values
@@ -236,7 +230,6 @@ defmodule ConfigTest do
         |> Config.check_from_config(minimal_config)
       end
     end
-
   end
 
   def config() do
@@ -249,5 +242,4 @@ defmodule ConfigTest do
       period_ms: 3000
     }
   end
-
 end

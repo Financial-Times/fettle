@@ -1,5 +1,4 @@
 defmodule RunnerSuperTest do
-
   use ExUnit.Case
 
   alias Fettle.Spec
@@ -40,5 +39,4 @@ defmodule RunnerSuperTest do
 
     assert_receive :check_got_args
   end
-
 end

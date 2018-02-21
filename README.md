@@ -69,7 +69,7 @@ config :fettle,
 
 where `system_code` is a code used in reports; see below for other options.
 
-* [1] - this changed in v0.2.0 - was auto-starting OTP application.
+* [1] - this changed in v1.0.0 - was auto-starting OTP application.
 ### Defining checks
 
 The [`fettle_checks`](https://github.com/Financial-Times/fettle_checks) module provides pre-canned checks, but to write your own, implement a module with the `Fettle.Checker` `@behaviour` that runs a check, and returns a `Fettle.Check.Result` struct:

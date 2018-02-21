@@ -57,7 +57,7 @@ def start(_type, _args) do
 end
 ```
 
-or otherwise call `Fettle.Supervisor.start_link/0`.
+or otherwise call `Fettle.Supervisor.start_link/1`.
 
 By default Fettle will load configuration from the `:fettle` application config key, the minimum 
 required configuration for start-up is:

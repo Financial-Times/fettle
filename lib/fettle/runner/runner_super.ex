@@ -2,7 +2,7 @@ defmodule Fettle.RunnerSupervisor do
   @moduledoc """
   Starts and supervises `Fettle.Runner` processes.
 
-  `start_link/2` starts the supervisor which creates `Fettle.Runner` processes for a
+  `start_link/1` starts the supervisor which creates `Fettle.Runner` processes for a
   list of checks, potentially from config, linking the current process to the supervisor.
 
   `start_check/2` is subsequently used for dynamically adding new checks; it takes a tuple

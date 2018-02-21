@@ -27,7 +27,7 @@ Add a dependency in your `mix.exs` config:
 ```elixir
 def deps do
   [
-    {:fettle, "~> 0.2"}
+    {:fettle, "~> 1.0"}
   ]
 end
 ```

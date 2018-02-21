@@ -4,7 +4,7 @@ defmodule Fettle.Mixfile do
   def project do
     [
       app: :fettle,
-      version: "0.2.0",
+      version: "1.0.0",
       elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
       source_url: "https://github.com/Financial-Times/fettle",

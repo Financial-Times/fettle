@@ -4,8 +4,8 @@ defmodule Fettle.Mixfile do
   def project do
     [
       app: :fettle,
-      version: "1.0.0",
-      elixir: "~> 1.5",
+      version: "1.1.0",
+      elixir: "~> 1.11",
       elixirc_paths: elixirc_paths(Mix.env()),
       source_url: "https://github.com/Financial-Times/fettle",
       description: description(),
@@ -47,12 +47,12 @@ defmodule Fettle.Mixfile do
 
   defp deps do
     [
-      {:deferred_config, "~> 0.1.0"},
-      {:credo, "~> 0.5", only: [:dev, :test]},
-      {:mix_test_watch, "~> 0.3", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
-      {:inch_ex, ">= 0.0.0", only: :docs}
+      {:deferred_config, "~> 0.1.1"},
+      {:credo, "~> 1.5", only: [:dev, :test]},
+      {:mix_test_watch, "~> 1.0.2", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.23.0", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
+      {:inch_ex, "~> 2.0", only: :docs}
     ]
   end
 end

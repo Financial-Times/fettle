@@ -1,3 +1,6 @@
+## v1.1.0
+* Upgrade Elixir version and dependency versions
+
 ## v1.0.0
 
 * Breaking changes:
